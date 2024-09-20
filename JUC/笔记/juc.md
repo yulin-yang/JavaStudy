@@ -1,85 +1,74 @@
-## 一、线程简介 
+# 一、线程简介 
 
-### 🍒1.多任务 
+## 1.多任务 
 
 ![pic_c993a763.png](juc.assets/pic_c993a763.png)  
 现实中太多这样同时做多件事情的例子了，看起来是多个任务都在做，其实本质上我们的大脑在同一时间依旧只做了一件事情。
 
-### 🍒2.多线程 
+## 2.多线程 
 
 ![pic_696336a3.png](juc.assets/pic_696336a3.png)  
-原来是一条路，慢慢因为车太多了，道路阻塞，效率极低。为了提高使用的效率，能够充分利用道路，于是加了多个车道。从此，妈妈再也不用担心道路阻塞了。  
+原来是一条路，慢慢因为车太多了，道路阻塞，效率极低。
+
+为了提高使用的效率，能够充分利用道路，于是加了多个车道。从此，妈妈再也不用担心道路阻塞了。  
+
 ![pic_2cfaa82d.png](juc.assets/pic_2cfaa82d.png)
 
-### 🍒3.程序.进程.线程 
+## 3.程序.进程.线程 
 
 ![pic_48f5abf4.png](juc.assets/pic_48f5abf4.png)
 
-### 🍒4.Process与Thread 
+## 4.Process与Thread 
 
- *  说起进程,就不得不说下程序。程序是指令和数据的有序集合，其本身没有任何运行的含义，是一个静态的概念。
+ *  说起进程，就不得不说下程序。程序是指令和数据的有序集合，其本身没有任何运行的含义，是一个静态的概念。
  *  而进程则是执行程序的依次执行过程，它是一个动态的概念。是系统资源分配的单位。
  *  通常在一个进程中可以包含若干个线程，当然一个进程中至少有一个线程，不然没有存在的意义。线程是CPU调度和执行的单位。
    
-    > 注意：  
+    > 注意： 
     > 很多多线程是模拟出来的，真正的多线程是指有多个cpu，即多核，如服务器。如果是模拟出来的多线程，即在一个cpu的情况下，在同一个时间点，cpu只能执行一个代码，因为切换的很快，所以就有同时执行的错局。
 
-### 🍒5.核心概念 
+## 5.核心概念 
 
  *  线程就是独立的执行路径
- *  在程序运行时,即使没有自己创建线程,后台也会有多个线程,比如主线程,GC线程
- *  main()称之为主线程,为系统的入口,用于执行整个程序
- *  在一个进程中,如果开辟了多个线程,线程的运行是由调度器（cpu）安排调度的,调度器是与操作系统紧密相关的,先后顺序是不能人为干预的
- *  对同一份资源操作时mm会存在资源抢夺的问题,需要加入并发控制
- *  线程会带来额外的开销,如CPU调度时间,并发控制开销
- *  每个线程在自己的工作内存交互,内存控制不当会造成数据不一致
+ *  在程序运行时，即使没有自己创建线程，后台也会有多个线程，比如主线程，GCC线程
+ *  main()称之为主线程，为系统的入口，用于执行整个程序
+ *  在一个进程中，如果开辟了多个线程，线程的运行是由调度器（cpu）安排调度的，调度器是与操作系统紧密相关的，先后顺序是不能人为干预的
+ *  对同一份资源操作时，会存在资源抢夺的问题，需要加入并发控制
+ *  线程会带来额外的开销，如CPU调度时间，并发控制开销
+ *  每个线程在自己的工作内存交互，内存控制不当会造成数据不一致
 
-## 二、线程实现 
+# 二、线程实现 
 
-### 🍒1.线程创建（三种方法） 
+## 1.线程创建（三种方法） 
 
-#### 🍍1.1继承Thread类(重要) 
+### 1.1继承Thread类(重要) 
 
-自定义线程类继承`Thread`类
+- 自定义线程类继承`Thread`类
 
-重写`run()`方法，编写线程执行体
+- 重写`run()`方法，编写线程执行体
+- 创建线程对象，调用`start()`方法启动线程
 
-创建线程对象，调用`start()`方法启动线程
-
-##### 实现 
+**实现** 
 
 ```java
 public class Demo1_CreateThread1 extends Thread {
-   
-     
-     
+
     @Override
     public void run() {
-   
-     
-     
+
         //run方法线程体
         for (int i = 0; i < 20; i++) {
-   
-     
-     
             System.out.println("我在看代码----" + i);
         }
     }
 
     public static void main(String[] args) {
-   
-     
-     
         //main线程，上线程
         //创建一个线程对象
         Demo1_CreateThread1 testThread = new Demo1_CreateThread1();
         //调用start（）开启线程
         testThread.start();
-        for (int i = 0; i < 200; i++) {
-   
-     
-     
+        for (int i = 0; i < 20; i++) {
             System.out.println("我在学习多线程----" + i);
         }
     }
@@ -88,27 +77,26 @@ public class Demo1_CreateThread1 extends Thread {
 
 总结：
 
-线程不一定立即执行，CPU安排调度  
+线程不一定立即执行，CPU安排调度 ，最终控制台输出`我在看代码----`和`我在学习多线程----`是交替执行的
+
+![image-20240920175014233](juc.assets/image-20240920175014233.png)
+
 案例：(下载图片)
 
-##### 案例 
+**案例** 
 
 ```java
 /**
- * 练习Thread,实现多线程同步下载图片
+ * 练习Thread，实现多线程同步下载图片
  */
 public class Demo2_DownloaderImgCase extends Thread {
-   
-     
-     
+
     private String url;//网络图片地址
     private String name;//报错扥文件名
 
     //有参构造
-    public Demo2_DownloaderImgCase(String url, String name) {
-   
-     
-     
+    public Demo2_DownloaderImgCase(String url， String name) {
+
         this.url = url;
         this.name = name;
     }
@@ -116,21 +104,17 @@ public class Demo2_DownloaderImgCase extends Thread {
     //下载图片线程的执行体
     @Override
     public void run() {
-   
-     
-     
+
         WebDownloader webDownloader = new WebDownloader();
-        webDownloader.downloader(url, name);
+        webDownloader.downloader(url， name);
         System.out.println("下载了文件名为:" + name);
     }
 
     public static void main(String[] args) {
-   
-     
-     
-        Demo2_DownloaderImgCase t = new Demo2_DownloaderImgCase("https://img-home.csdnimg.cn/images/20201124032511.png", "1.png");
-        Demo2_DownloaderImgCase t1 = new Demo2_DownloaderImgCase("https://img-home.csdnimg.cn/images/20201124032511.png", "2.png");
-        Demo2_DownloaderImgCase t2 = new Demo2_DownloaderImgCase("https://img-home.csdnimg.cn/images/20201124032511.png", "3.png");
+
+        Demo2_DownloaderImgCase t = new Demo2_DownloaderImgCase("https://img-home.csdnimg.cn/images/20201124032511.png"， "1.png");
+        Demo2_DownloaderImgCase t1 = new Demo2_DownloaderImgCase("https://img-home.csdnimg.cn/images/20201124032511.png"， "2.png");
+        Demo2_DownloaderImgCase t2 = new Demo2_DownloaderImgCase("https://img-home.csdnimg.cn/images/20201124032511.png"， "3.png");
         t.start();
         t1.start();
         t2.start();
@@ -143,7 +127,7 @@ class WebDownloader {
      
      
     //下载方法
-    public void downloader(String url, String name) {
+    public void downloader(String url， String name) {
    
      
      
@@ -151,29 +135,29 @@ class WebDownloader {
    
      
      
-            FileUtils.copyURLToFile(new URL(url), new File(name));
+            FileUtils.copyURLToFile(new URL(url)， new File(name));
         } catch (IOException e) {
    
      
      
             e.printStackTrace();
-            System.out.println("IO异常,downloader方法出现问题");
+            System.out.println("IO异常，downloader方法出现问题");
         }
     }
 }
 ```
 
-#### 🍍1.2实现Runnable接口 
+### 1.2实现Runnable接口 （重点）
 
-推荐使用Runnable对象,因为Java单继承的局限性
+推荐使用Runnable对象，因为Java单继承的局限性
 
 自定义线程类实现`Runnable`接口
 
-实现`run()`方法,编写线程执行体
+实现`run()`方法，编写线程执行体
 
-创建线程对象,调用`start()`方法启动对象
+创建线程对象，调用`start()`方法启动对象
 
-##### 实现 
+#### 实现 
 
 ```java
 public class Demo3_CreateRunnable implements Runnable {
@@ -192,7 +176,7 @@ public class Demo3_CreateRunnable implements Runnable {
 
         //创建runnable接口的实现类对象
         Demo3_CreateRunnable testThread = new Demo3_CreateRunnable();
-        //创建线程对象,通过线程对象来开启我们的线程,代理
+        //创建线程对象，通过线程对象来开启我们的线程，代理
         Thread thread = new Thread(testThread);
         //调用start（）开启线程
         thread.start();
@@ -208,7 +192,7 @@ public class Demo3_CreateRunnable implements Runnable {
 }
 ```
 
-##### 案例 
+#### 案例 
 
 火车票:
 
@@ -216,7 +200,7 @@ public class Demo3_CreateRunnable implements Runnable {
 /**
  * 多个线程同时操作同一个对象  买火车票案例
  */
-//发现问题:多个线程操作同一个资源的情况下,线程不安全,数据紊乱
+//发现问题:多个线程操作同一个资源的情况下，线程不安全，数据紊乱
 public class Demo4_TrainTicketsCase implements Runnable {
    
      
@@ -261,10 +245,10 @@ public class Demo4_TrainTicketsCase implements Runnable {
      
      
         Demo4_TrainTicketsCase ticket = new Demo4_TrainTicketsCase();
-        new Thread(ticket, "小红").start();
-        new Thread(ticket, "老师").start();
-        new Thread(ticket, "黄牛1").start();
-        new Thread(ticket, "黄牛2").start();
+        new Thread(ticket， "小红").start();
+        new Thread(ticket， "老师").start();
+        new Thread(ticket， "黄牛1").start();
+        new Thread(ticket， "黄牛2").start();
     }
 }
 ```
@@ -312,7 +296,7 @@ public class Demo5_RaceCase implements Runnable {
             }
             //判断比赛是否结束
             boolean flag = gameOver(i);
-            //如果比赛结束,停止程序
+            //如果比赛结束，停止程序
             if (flag) {
    
      
@@ -354,13 +338,13 @@ public class Demo5_RaceCase implements Runnable {
      
      
         Demo5_RaceCase race = new Demo5_RaceCase();
-        new Thread(race, "兔子").start();
-        new Thread(race, "乌龟").start();
+        new Thread(race， "兔子").start();
+        new Thread(race， "乌龟").start();
     }
 }
 ```
 
-#### 🍍1.3实现Callable接口（了解） 
+### 1.3实现Callable接口（了解） 
 
 实现Callable接口，需要返回值类型
 
@@ -376,7 +360,7 @@ public class Demo5_RaceCase implements Runnable {
 
 关闭服务：ser.shutdownNow();
 
-##### 实现 
+#### 实现 
 
 ```java
 /**
@@ -388,7 +372,7 @@ public class Demo6_CreateCallable implements Callable<Boolean> {
     private String name;//报错扥文件名
 
     //有参构造
-    public Demo6_CreateCallable(String url, String name) {
+    public Demo6_CreateCallable(String url， String name) {
         this.url = url;
         this.name = name;
     }
@@ -396,15 +380,15 @@ public class Demo6_CreateCallable implements Callable<Boolean> {
     //下载图片线程的执行体
     public Boolean call() throws Exception {
         WebDownloader webDownloader = new WebDownloader();
-        webDownloader.downloader(url, name);
+        webDownloader.downloader(url， name);
         System.out.println("下载了文件名为:" + name);
         return true;
     }
 
-    public static void main(String[] args) throws ExecutionException, InterruptedException {
-        Demo6_CreateCallable c = new Demo6_CreateCallable("https://img-home.csdnimg.cn/images/20201124032511.png", "1.png");
-        Demo6_CreateCallable c1 = new Demo6_CreateCallable("https://img-home.csdnimg.cn/images/20201124032511.png", "2.png");
-        Demo6_CreateCallable c2 = new Demo6_CreateCallable("https://img-home.csdnimg.cn/images/20201124032511.png", "3.png");
+    public static void main(String[] args) throws ExecutionException， InterruptedException {
+        Demo6_CreateCallable c = new Demo6_CreateCallable("https://img-home.csdnimg.cn/images/20201124032511.png"， "1.png");
+        Demo6_CreateCallable c1 = new Demo6_CreateCallable("https://img-home.csdnimg.cn/images/20201124032511.png"， "2.png");
+        Demo6_CreateCallable c2 = new Demo6_CreateCallable("https://img-home.csdnimg.cn/images/20201124032511.png"， "3.png");
         //创建执行服务
         ExecutorService ser = Executors.newFixedThreadPool(3);
         //提交执行
@@ -422,13 +406,13 @@ public class Demo6_CreateCallable implements Callable<Boolean> {
 //class WebDownloader在前面下载图片已经定义了，这里就不用再次写，直接使用就好
 ```
 
-##### 好处 
+#### 好处 
 
 可以定义返回值
 
 可以抛出异常
 
-#### 🍍1.4Thread和Runnable对比 
+### 1.4Thread和Runnable对比 
 
 继承Thred类:
 
@@ -440,10 +424,10 @@ public class Demo6_CreateCallable implements Callable<Boolean> {
 
  *  实现接口Runnable具有多线程能力
  *  启动线程:传入目标对象+Thread对象.start()
- *  推荐使用:避免单继承局限性,灵活方便,方便同一个对象被多个线程使用  
+ *  推荐使用:避免单继承局限性，灵活方便，方便同一个对象被多个线程使用  
     ![pic_3714c580.png](juc.assets/pic_3714c580.png)
 
-### 🍒2.静态代理 
+## 2.静态代理 
 
 ![pic_c9f53004.png](juc.assets/pic_c9f53004.png)
 
@@ -484,7 +468,7 @@ class You implements Marry {
    
      
      
-        System.out.println("doris要结婚了,超开心");
+        System.out.println("doris要结婚了，超开心");
     }
 }
 
@@ -493,7 +477,7 @@ class WeddingCompany implements Marry {
    
      
      
-    private Marry target;//代理-->真实目标角色角色,帮谁结婚
+    private Marry target;//代理-->真实目标角色角色，帮谁结婚
 
     public WeddingCompany(Marry target) {
    
@@ -516,19 +500,19 @@ class WeddingCompany implements Marry {
    
      
      
-        System.out.println("结婚之前,布置现场");
+        System.out.println("结婚之前，布置现场");
     }
 
     private void before() {
    
      
      
-        System.out.println("结婚之后,收尾款");
+        System.out.println("结婚之后，收尾款");
     }
 }
 ```
 
-优化:使用线程,Lamda表达式
+优化:使用线程，Lamda表达式
 
 ```java
 /**
@@ -559,7 +543,7 @@ public class Demo8_StaticProxy {
 代理对象可以做很多真实对象做不了的事情  
 真实对象专注做自己的事
 
-### 🍒3.Lamda表达式 
+## 3.Lamda表达式 
 
 #### 介绍 
 
@@ -568,7 +552,7 @@ public class Demo8_StaticProxy {
  *  λ 希腊字母表中排序第十一位的字母，英语名称为 Lamda
  *  避免匿名内部类定义过多
  *  其实质属于函数式编程的概念
- *  去掉了一堆没有意义的代码,只留下核心逻辑
+ *  去掉了一堆没有意义的代码，只留下核心逻辑
 
 > (params)-> expression\[表达式\]
 >
@@ -586,18 +570,16 @@ new Thread (()->System.out.println(“多线程学习。。。。”)).start();
 
 #### 函数式接口的定义: 
 
-任何接口,如果只包含唯一一个抽象方法,那么它就是一个函数式接口.
+任何接口，如果只包含唯一一个抽象方法，那么它就是一个函数式接口.
 
 ```java
 public interface Runnable{
-   
-     
-     
+       
     public abstract void run();
 }
 ```
 
-对于函数式接口,我们可以通过Lamda表达式来创建该接口的对象.
+对于函数式接口，我们可以通过Lamda表达式来创建该接口的对象.
 
 #### 实现: 
 
@@ -608,13 +590,9 @@ public interface Runnable{
  * 推导lamda表达式
  */
 public class Demo9_Lamda {
-   
-     
-     
+             
     public static void main(String[] args) {
-   
-     
-     
+             
         ILike like = new Like();
         like.lamda();
     }
@@ -622,22 +600,16 @@ public class Demo9_Lamda {
 
 // 1.定义一个函数式接口
 interface ILike {
-   
-     
-     
+             
     void lamda();
 }
 
 // 2.实现类
 class Like implements ILike {
-   
-     
-     
+             
     @Override
     public void lamda() {
-   
-     
-     
+             
         System.out.println("I like lamda");
     }
 }
@@ -715,7 +687,7 @@ public class Demo12_Lamda3 {
    
      
      
-        //5.匿名内部类,没有类的名称,必须借助接口或者父类
+        //5.匿名内部类，没有类的名称，必须借助接口或者父类
         ILike like = new ILike () {
    
      
@@ -792,9 +764,9 @@ public class Demo14_LamdaCase2 {
         love = a -> System.out.println("I love you -->" + a);
 
         /**总结:
-         * {}简略的条件是只能有一行代码,多行{}就不能简略了
+         * {}简略的条件是只能有一行代码，多行{}就不能简略了
          * 前提是接口为函数式接口(只能有一个方法)
-         * 多个参数也可以去掉参数类型,要去掉就都去掉,必须加上()
+         * 多个参数也可以去掉参数类型，要去掉就都去掉，必须加上()
          */
 
         love.love(520);
@@ -809,14 +781,14 @@ interface ILove {
 }
 ```
 
-## 三、线程状态 
+# 三、线程状态 
 
-### 🍒1.线程五大状态: 
+## 🍒1.线程五大状态: 
 
 ![pic_9b1d0040.png](juc.assets/pic_9b1d0040.png)  
 ![pic_ca887312.png](juc.assets/pic_ca887312.png)
 
-### 🍒2.线程方法 
+## 🍒2.线程方法 
 
 ![pic_abcd979d.png](juc.assets/pic_abcd979d.png)
 
@@ -829,7 +801,7 @@ interface ILove {
 ```java
 /**
  * 测试stop
- * 1.建议线程正常停止-->利用次数,不建议死循环
+ * 1.建议线程正常停止-->利用次数，不建议死循环
  * 2.建议使用标志位-->设置一个标志位
  * 3.不要使用stop或者destroy等过时或者JDK不建议使用的方法
  */
@@ -854,7 +826,7 @@ public class Demo15_StopThread implements Runnable {
         }
     }
 
-    // 2. 设置一个公开的方法停止线程,转换标志位
+    // 2. 设置一个公开的方法停止线程，转换标志位
     public void stop() {
    
      
@@ -877,7 +849,7 @@ public class Demo15_StopThread implements Runnable {
    
      
      
-                //调用stop()切换标志位,让线程终止
+                //调用stop()切换标志位，让线程终止
                 stop.stop();
                 System.out.println("该线程停止了");
             }
@@ -940,9 +912,9 @@ public class Demo16_SleepThread implements Runnable {
      
      
         Demo4_TrainTicketsCase ticket = new Demo4_TrainTicketsCase();
-        new Thread(ticket, "小红").start();
-        new Thread(ticket, "老师").start();
-        new Thread(ticket, "黄牛1").start();
+        new Thread(ticket， "小红").start();
+        new Thread(ticket， "老师").start();
+        new Thread(ticket， "黄牛1").start();
     }
 }
 ```
@@ -1043,7 +1015,7 @@ public class Demo18_SleepThread3 {
 ```java
 /**
  * 测试礼让线程
- * 礼让不一定成功,看cpu心情
+ * 礼让不一定成功，看cpu心情
  */
 public class Demo19_YieldThread {
    
@@ -1054,8 +1026,8 @@ public class Demo19_YieldThread {
      
      
         MyYeild myYeild = new MyYeild();
-        new Thread(myYeild, "a").start();
-        new Thread(myYeild, "b").start();
+        new Thread(myYeild， "a").start();
+        new Thread(myYeild， "b").start();
     }
 }
 
@@ -1129,7 +1101,7 @@ public class Demo20_JoinThread implements Runnable {
 }
 ```
 
-### 🍒3.线程状态观测 
+## 🍒3.线程状态观测 
 
 ![pic_dc01c4f9.png](juc.assets/pic_dc01c4f9.png)
 
@@ -1179,18 +1151,18 @@ public class Demo21_ThreadState {
         while (state != Thread.State.TERMINATED) {
    
      
-     //只要现成不终止,就一直输出状态
+     //只要现成不终止，就一直输出状态
             Thread.sleep(100);
             state = thread.getState();//更新线程状态
             System.out.println(state);
         }
-        //死亡后的线程不能再启动了,启动会报异常
+        //死亡后的线程不能再启动了，启动会报异常
         //thread.start();
     }
 }
 ```
 
-### 🍒4.线程优先级 
+## 🍒4.线程优先级 
 
 ![pic_ed4138f5.png](juc.assets/pic_ed4138f5.png)
 
@@ -1218,7 +1190,7 @@ public class Demo22_ThreadPriority{
         Thread thread4 = new Thread(myPriority);
         Thread thread5 = new Thread(myPriority);
 
-        //先设置优先级,再启动
+        //先设置优先级，再启动
         thread1.start();
 
         thread2.setPriority(1);
@@ -1248,7 +1220,7 @@ class MyPriority implements Runnable{
 }
 ```
 
-### 🍒5.守护(daemon)线程 
+## 🍒5.守护(daemon)线程 
 
 ![pic_e9b27a8c.png](juc.assets/pic_e9b27a8c.png)
 
@@ -1271,7 +1243,7 @@ public class Demo23_DaemonThread {
         You you = new You();
 
         Thread thread = new Thread(god);
-        //默认false表示是用户线程,正常的线程都是用户线程...
+        //默认false表示是用户线程，正常的线程都是用户线程...
         thread.setDaemon(true);
         //上帝守护线程启动
         thread.start();
@@ -1344,9 +1316,9 @@ public class Demo24_UnsafeBuyTicket {
      
      
         BuyTicket buyTicket = new BuyTicket();
-        new Thread(buyTicket, "张三").start();
-        new Thread(buyTicket, "李四").start();
-        new Thread(buyTicket, "王五").start();
+        new Thread(buyTicket， "张三").start();
+        new Thread(buyTicket， "李四").start();
+        new Thread(buyTicket， "王五").start();
     }
 }
 
@@ -1426,9 +1398,9 @@ public class Demo25_UnsafeBank {
    
      
      
-        Account account = new Account(100, "结婚基金");
-        Drawing you = new Drawing(account, 50, "展堂");
-        Drawing girlfriend = new Drawing(account, 100, "sad");
+        Account account = new Account(100， "结婚基金");
+        Drawing you = new Drawing(account， 50， "展堂");
+        Drawing girlfriend = new Drawing(account， 100， "sad");
         you.start();
         girlfriend.start();
     }
@@ -1442,7 +1414,7 @@ class Account {
     int money;//余额
     String cardName;//卡名
 
-    public Account(int money, String cardName) {
+    public Account(int money， String cardName) {
    
      
      
@@ -1460,7 +1432,7 @@ class Drawing extends Thread {
     int drawingMoney;//取金额
     int nowMoney;//你手里的钱
 
-    public Drawing(Account account, int drawingMoney, String name) {
+    public Drawing(Account account， int drawingMoney， String name) {
    
      
      
@@ -1480,7 +1452,7 @@ class Drawing extends Thread {
    
      
      
-            System.out.println(Thread.currentThread().getName() + "余额不足,不能进行取钱");
+            System.out.println(Thread.currentThread().getName() + "余额不足，不能进行取钱");
             return;
         }
         try {
@@ -1536,7 +1508,7 @@ public class Demo26_UnsafeList {
 
 ![pic_48ff7e9c.png](juc.assets/pic_48ff7e9c.png)  
 ![pic_5474934e.png](juc.assets/pic_5474934e.png)  
-同步方法,锁的是this
+同步方法，锁的是this
 
 #### 实现: 
 
@@ -1551,9 +1523,9 @@ public class Demo27_SafeBuyTicket {
      
      
         BuyTicket1 buyTicket = new BuyTicket1();
-        new Thread(buyTicket, "张三").start();
-        new Thread(buyTicket, "李四").start();
-        new Thread(buyTicket, "王五").start();
+        new Thread(buyTicket， "张三").start();
+        new Thread(buyTicket， "李四").start();
+        new Thread(buyTicket， "王五").start();
     }
 }
 
@@ -1589,7 +1561,7 @@ class BuyTicket1 implements Runnable {
         }
     }
 
-    //synchronized 同步方法,锁的是this
+    //synchronized 同步方法，锁的是this
     private synchronized void buy() {
    
      
@@ -1624,7 +1596,7 @@ class BuyTicket1 implements Runnable {
 ### 🍒4.同步块 
 
 ![pic_0e1dfd45.png](juc.assets/pic_0e1dfd45.png)  
-锁的对象就是变量的量,需要增删改查的对象
+锁的对象就是变量的量，需要增删改查的对象
 
 #### 实现: 
 
@@ -1640,9 +1612,9 @@ public class Demo28_SafeBank {
    
      
      
-        Account1 account = new Account1(100, "结婚基金");
-        Drawing1 you = new Drawing1(account, 50, "展堂");
-        Drawing1 girlfriend = new Drawing1(account, 100, "sad");
+        Account1 account = new Account1(100， "结婚基金");
+        Drawing1 you = new Drawing1(account， 50， "展堂");
+        Drawing1 girlfriend = new Drawing1(account， 100， "sad");
         you.start();
         girlfriend.start();
     }
@@ -1656,7 +1628,7 @@ class Account1 {
     int money;//余额
     String cardName;//卡名
 
-    public Account1(int money, String cardName) {
+    public Account1(int money， String cardName) {
    
      
      
@@ -1674,7 +1646,7 @@ class Drawing1 extends Thread {
     int drawingMoney;//取金额
     int nowMoney;//你手里的钱
 
-    public Drawing1(Account1 account, int drawingMoney, String name) {
+    public Drawing1(Account1 account， int drawingMoney， String name) {
    
      
      
@@ -1689,7 +1661,7 @@ class Drawing1 extends Thread {
    
      
      
-        //锁的对象就是变量的量,需要增删改查的对象
+        //锁的对象就是变量的量，需要增删改查的对象
         synchronized (account) {
    
      
@@ -1699,7 +1671,7 @@ class Drawing1 extends Thread {
    
      
      
-                System.out.println(Thread.currentThread().getName() + "余额不足,不能进行取钱");
+                System.out.println(Thread.currentThread().getName() + "余额不足，不能进行取钱");
                 return;
             }
             try {
@@ -1815,7 +1787,7 @@ public class Demo30_ThreadJuc {
 
 ```java
 /**
- * 死锁:多个线程互相抱着对方需要的资源,然后形成僵持
+ * 死锁:多个线程互相抱着对方需要的资源，然后形成僵持
  * 解决:一个锁只锁一个对象
  */
 class Demo31_DeadLock {
@@ -1826,8 +1798,8 @@ class Demo31_DeadLock {
    
      
      
-        Makeup makeup = new Makeup(0, "灰姑娘");
-        Makeup makeup1 = new Makeup(1, "白雪公主");
+        Makeup makeup = new Makeup(0， "灰姑娘");
+        Makeup makeup1 = new Makeup(1， "白雪公主");
         makeup.start();
         makeup1.start();
     }
@@ -1848,13 +1820,13 @@ class Makeup extends Thread {
    
      
      
-    //需要的资源只有一份,用static保证只有一份
+    //需要的资源只有一份，用static保证只有一份
     static Lipstick lipstick = new Lipstick();
     static Mirror mirror = new Mirror();
     int choice;//选择
     String girlName;//使用化妆品的人
 
-    public Makeup(int choice, String girlName) {
+    public Makeup(int choice， String girlName) {
    
      
      
@@ -1928,7 +1900,7 @@ class Makeup extends Thread {
 
 ```java
 /**
- * 死锁:多个线程互相抱着对方需要的资源,然后形成僵持
+ * 死锁:多个线程互相抱着对方需要的资源，然后形成僵持
  * 解决:一个锁只锁一个对象
  */
 class Demo31_DeadLock {
@@ -1939,8 +1911,8 @@ class Demo31_DeadLock {
    
      
      
-        Makeup makeup = new Makeup(0, "灰姑娘");
-        Makeup makeup1 = new Makeup(1, "白雪公主");
+        Makeup makeup = new Makeup(0， "灰姑娘");
+        Makeup makeup1 = new Makeup(1， "白雪公主");
         makeup.start();
         makeup1.start();
     }
@@ -1961,13 +1933,13 @@ class Makeup extends Thread {
    
      
      
-    //需要的资源只有一份,用static保证只有一份
+    //需要的资源只有一份，用static保证只有一份
     static Lipstick lipstick = new Lipstick();
     static Mirror mirror = new Mirror();
     int choice;//选择
     String girlName;//使用化妆品的人
 
-    public Makeup(int choice, String girlName) {
+    public Makeup(int choice， String girlName) {
    
      
      
@@ -2250,13 +2222,13 @@ class SynContainer {
    
      
      
-        //如果容器满了,需要等待消费者消费
+        //如果容器满了，需要等待消费者消费
         /*如果是if的话，假如消费者1消费了最后一个，这是index变成0此时释放锁被消费者2拿到而不是生产者拿到，这时消费者的wait是在if里所以它就直接去消费index-1下标越界，如果是while就会再去判断一下index得值是不是变成0了*/
         while (count == products.length) {
    
      
      
-            //通知消费者消费,等待生产
+            //通知消费者消费，等待生产
             try {
    
      
@@ -2269,7 +2241,7 @@ class SynContainer {
                 e.printStackTrace();
             }
         }
-        //如果没有满,需要丢入产品
+        //如果没有满，需要丢入产品
         products[count] = product;
         count++;
         //通知消费者消费
@@ -2420,13 +2392,13 @@ class SynContainer {
    
      
      
-        //如果容器满了,需要等待消费者消费
+        //如果容器满了，需要等待消费者消费
         /*如果是if的话，假如消费者1消费了最后一个，这是index变成0此时释放锁被消费者2拿到而不是生产者拿到，这时消费者的wait是在if里所以它就直接去消费index-1下标越界，如果是while就会再去判断一下index得值是不是变成0了*/
         while (count == products.length) {
    
      
      
-            //通知消费者消费,等待生产
+            //通知消费者消费，等待生产
             try {
    
      
@@ -2439,7 +2411,7 @@ class SynContainer {
                 e.printStackTrace();
             }
         }
-        //如果没有满,需要丢入产品
+        //如果没有满，需要丢入产品
         products[count] = product;
         count++;
         //通知消费者消费
@@ -2494,7 +2466,7 @@ public class Demo35_ThreadPool {
    
      
      
-        // 1. 创建服务,擦行间线程池
+        // 1. 创建服务，擦行间线程池
         // newFixedThreadPool(线程池大小)
         ExecutorService service = Executors.newFixedThreadPool(10);
         //执行
