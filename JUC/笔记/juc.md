@@ -66,7 +66,7 @@ public class Demo1_CreateThread1 extends Thread {
         //main线程，上线程
         //创建一个线程对象
         Demo1_CreateThread1 testThread = new Demo1_CreateThread1();
-        //调用start（）开启线程
+        //调用start()开启线程，开启的就是run()方法
         testThread.start();
         for (int i = 0; i < 20; i++) {
             System.out.println("我在学习多线程----" + i);
@@ -104,10 +104,9 @@ public class Demo2_DownloaderImgCase extends Thread {
     //下载图片线程的执行体
     @Override
     public void run() {
-
         WebDownloader webDownloader = new WebDownloader();
         webDownloader.downloader(url， name);
-        System.out.println("下载了文件名为:" + name);
+        System.out.rintln("下载了文件名为:" + name);
     }
 
     public static void main(String[] args) {
@@ -126,9 +125,7 @@ class WebDownloader {
  
     //下载方法
     public void downloader(String url， String name) {
-
         try {
-
             FileUtils.copyURLToFile(new URL(url)， new File(name));
         } catch (IOException e) {
     e.printStackTrace();
@@ -140,15 +137,16 @@ class WebDownloader {
 
 ### 1.2实现Runnable接口 （重点）
 
-推荐使用Runnable对象，因为Java单继承的局限性
+推荐使用`Runnable`对象，因为Java单继承的局限性
 
-自定义线程类实现`Runnable`接口
+- 自定义线程类实现`Runnable`接口
 
-实现`run()`方法，编写线程执行体
+- 实现`run()`方法，编写线程执行体
 
-创建线程对象，调用`start()`方法启动对象
+- 创建线程对象，调用`start()`方法启动对象
 
-#### 实现 
+
+**实现** 
 
 ```java
 public class Demo3_CreateRunnable implements Runnable {
@@ -174,166 +172,113 @@ public class Demo3_CreateRunnable implements Runnable {
 
         //new Thread(testThread).start();
         for (int i = 0; i < 200; i++) {
-   
-     
-     
             System.out.println("我在学习多线程----" + i);
         }
     }
 }
 ```
 
-#### 案例 
-
-火车票:
+我们可以点进去`Thread()`方法看一下源码发现，参数传入的是一个`Runnable`对象
 
 ```java
-/**
- * 多个线程同时操作同一个对象  买火车票案例
- */
-//发现问题:多个线程操作同一个资源的情况下，线程不安全，数据紊乱
-public class Demo4_TrainTicketsCase implements Runnable {
-   
-     
-     
-
-    //票数
-    private int ticketNums = 10;
-
-    @Override
-    public void run() {
-   
-     
-     
-        while (true) {
-   
-     
-     
-            if (ticketNums <= 0) {
-   
-     
-     
-                break;
-            }
-            //捕获异常
-            try {
-   
-     
-     
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-   
-     
-     
-                e.printStackTrace();
-            }
-            System.out.println(Thread.currentThread().getName() + "--->拿到了第" + ticketNums-- + "张票");
-        }
-    }
-
-    public static void main(String[] args) {
-   
-     
-     
-        Demo4_TrainTicketsCase ticket = new Demo4_TrainTicketsCase();
-        new Thread(ticket， "小红").start();
-        new Thread(ticket， "老师").start();
-        new Thread(ticket， "黄牛1").start();
-        new Thread(ticket， "黄牛2").start();
-    }
+public Thread(Runnable target) {
+    init(null, target, "Thread-" + nextThreadNum(), 0);
 }
 ```
 
-龟兔赛跑:
+**案例** ：
 
-![pic_8cff0265.png](juc.assets/pic_8cff0265.png)
+1. ### 火车票:
 
-```java
-/**
- * 模拟龟兔赛跑
- */
-public class Demo5_RaceCase implements Runnable {
+   ```java
+   //发现问题:多个线程操作同一个资源的情况下，线程不安全，数据紊乱
+   public class TestThread4 implements Runnable {
    
-     
-     
-    //胜利者
-    private static String winner;
+       //票数
+       private int ticketNums = 10;
+   
+       @Override
+       public void run() {
+           while (true) {
+               if (ticketNums <= 0) {
+                   break;
+               }
+               //拿到线程的名字
+               System.out.println(Thread.currentThread().getName() + "--->拿到了第" + ticketNums-- + "张票");
+           }
+       }
+       public static void main(String[] args) {
+   
+           TestThread4 ticket = new TestThread4();
+           //创建线程的同时给线程命名
+           new Thread(ticket,"小红").start();
+           new Thread(ticket,"老师").start();
+           new Thread(ticket,"黄牛1").start();
+           new Thread(ticket,"黄牛2").start();
+       }
+   }
+   ```
 
-    @Override
-    public void run() {
-   
-     
-     
-        for (int i = 0; i <= 100; i++) {
-   
-     
-     
-            //模拟兔子休息
-            if (Thread.currentThread().getName().equals("兔子") && i % 10 == 0) {
-   
-     
-     
-                try {
-   
-     
-     
-                    Thread.sleep(2);
-                } catch (InterruptedException e) {
-   
-     
-     
-                    e.printStackTrace();
-                }
-            }
-            //判断比赛是否结束
-            boolean flag = gameOver(i);
-            //如果比赛结束，停止程序
-            if (flag) {
-   
-     
-     
-                break;
-            }
-            System.out.println(Thread.currentThread().getName() + "--->跑了" + i + "步");
-        }
-    }
+   ![image-20240921182603865](juc.assets/image-20240921182603865.png)
 
-    //判断是否完成
-    private boolean gameOver(int steps) {
-   
-     
-     
-        if (winner != null) {
-   
-     
-     
-            return true;
-        } else {
-   
-     
-     
-            if (steps >= 100) {
-   
-     
-     
-                winner = Thread.currentThread().getName();
-                System.out.println("winner is " + winner);
-                return true;
-            }
-        }
-        return false;
-    }
+   此时我们可以看到，当多个线程操作同一个资源的时候，容易发生重复问题，使得线程不安全。
 
-    public static void main(String[] args) {
+2. ### 龟兔赛跑
+
+   ![pic_8cff0265.png](juc.assets/pic_8cff0265.png)
+
+   ```java
+   package com.yang;
    
-     
-     
-        Demo5_RaceCase race = new Demo5_RaceCase();
-        new Thread(race， "兔子").start();
-        new Thread(race， "乌龟").start();
-    }
-}
-```
+   /**
+    * 模拟龟兔赛跑
+    */
+   public class TestThread5 implements Runnable {
+   
+       private static String winner;
+   
+       public static void main(String[] args) {
+           TestThread5 race = new TestThread5();
+           new Thread(race,"兔子").start();
+           new Thread(race,"乌龟").start();
+       }
+   
+       @Override
+       public void run() {
+           for (int i = 0; i <= 100; i++) {
+               //模拟兔子休息，让兔子每跑10步就睡200ms
+               if (Thread.currentThread().getName().equals("兔子") && i % 10 == 0) {
+                   try {
+                       Thread.sleep(2);
+                   } catch (InterruptedException e) {
+                       e.printStackTrace();
+                   }
+               }
+               //判断比赛是否结束
+               boolean flag = gameOver(i);
+               //如果比赛结束，停止程序
+               if (flag) {
+                   break;
+               }
+               System.out.println(Thread.currentThread().getName() + "--->跑了" + i + "步");
+           }
+       }
+   
+       //判断是否完成
+       private boolean gameOver(int steps) {
+           if (winner != null) {
+               return true;
+           } else {
+               if (steps >= 100) {
+                   winner = Thread.currentThread().getName();
+                   System.out.println("winner is " + winner);
+                   return true;
+               }
+           }
+           return false;
+       }
+   }
+   ```
 
 ### 1.3实现Callable接口（了解） 
 
@@ -351,7 +296,7 @@ public class Demo5_RaceCase implements Runnable {
 
 关闭服务：ser.shutdownNow();
 
-#### 实现 
+实现 
 
 ```java
 /**
@@ -397,7 +342,7 @@ public class Demo6_CreateCallable implements Callable<Boolean> {
 //class WebDownloader在前面下载图片已经定义了，这里就不用再次写，直接使用就好
 ```
 
-#### 好处 
+好处 
 
 可以定义返回值
 
@@ -409,13 +354,13 @@ public class Demo6_CreateCallable implements Callable<Boolean> {
 
  *  子类继承Thread类具备多线程能力
  *  启动线程:子类对象.start()
- *  不建议使用:避免OOP单继承局限性
+ *  **不建议使用**:避免OOP单继承局限性
 
 实现Runnable接口
 
  *  实现接口Runnable具有多线程能力
  *  启动线程:传入目标对象+Thread对象.start()
- *  推荐使用:避免单继承局限性，灵活方便，方便同一个对象被多个线程使用  
+ *  **推荐使用**:避免单继承局限性，灵活方便，方便同一个对象被多个线程使用  
     ![pic_3714c580.png](juc.assets/pic_3714c580.png)
 
 ## 2.静态代理 
@@ -428,76 +373,48 @@ public class Demo6_CreateCallable implements Callable<Boolean> {
 /**
  * 静态代理:结婚案例
  */
-public class Demo7_StaticProxy {
-   
-     
-     
-    public static void main(String[] args) {
-   
-     
-     
+public class Demo7_StaticProxy {     
+    public static void main(String[] args) {  
         WeddingCompany weddingCompany = new WeddingCompany(new You());
         weddingCompany.happyMarry();
     }
 }
 
 //结婚
-interface Marry {
-   
-     
-     
+interface Marry {  
     void happyMarry();
 }
 
 //真实角色:你去结婚
 class You implements Marry {
-   
-     
-     
+
     @Override
     public void happyMarry() {
-   
-     
-     
         System.out.println("doris要结婚了，超开心");
     }
 }
 
 //代理角色:帮助你结婚
 class WeddingCompany implements Marry {
-   
-     
-     
+
     private Marry target;//代理-->真实目标角色角色，帮谁结婚
 
     public WeddingCompany(Marry target) {
-   
-     
-     
         this.target = target;
     }
 
     @Override
     public void happyMarry() {
-   
-     
-     
         after();
         this.target.happyMarry();
         before();
     }
 
     private void after() {
-   
-     
-     
         System.out.println("结婚之前，布置现场");
     }
 
     private void before() {
-   
-     
-     
         System.out.println("结婚之后，收尾款");
     }
 }
@@ -510,13 +427,7 @@ class WeddingCompany implements Marry {
  * 线程中的代理模式
  */
 public class Demo8_StaticProxy {
-   
-     
-     
     public static void main(String[] args) {
-   
-     
-     
         new Thread(()-> System.out.println("我爱你")).start();
         new WeddingCompany(new You()).happyMarry();
     }
@@ -555,7 +466,7 @@ public class Demo8_StaticProxy {
 a -> System.out.println("i like lamda-->"+a)
 ```
 
-new Thread (()->System.out.println(“多线程学习。。。。”)).start();
+`new Thread (()->System.out.println(“多线程学习。。。。”)).start();`
 
 理解Functional Interface (函数式接口) 是学习Java8 lamda表达式的关键
 
@@ -564,8 +475,7 @@ new Thread (()->System.out.println(“多线程学习。。。。”)).start();
 任何接口，如果只包含唯一一个抽象方法，那么它就是一个函数式接口.
 
 ```java
-public interface Runnable{
-       
+public interface Runnable{       
     public abstract void run();
 }
 ```
@@ -575,6 +485,10 @@ public interface Runnable{
 #### 实现: 
 
 ##### 案例1: 
+
+我们一开始是这么写的，写一个`ILike`接口，其中包含有抽象方法`lamda()`，然后我们会写一个`Like`类来实现`ILike`接口，并且实现`lamda`方法
+
+当需要的时候我们会用 `ILike like = new Like()`来调用
 
 ```java
 /**
@@ -590,17 +504,15 @@ public class Demo9_Lamda {
 }
 
 // 1.定义一个函数式接口
-interface ILike {
-             
+interface ILike {             
     void lamda();
 }
 
 // 2.实现类
 class Like implements ILike {
-             
+    
     @Override
-    public void lamda() {
-             
+    public void lamda() {            
         System.out.println("I like lamda");
     }
 }
@@ -608,29 +520,20 @@ class Like implements ILike {
 
 优化1：
 
+把实现类变成静态内部类，并加上`static`关键字
+
 ```java
 public class Demo10_Lamda1 {
-   
-     
-     
+ 
     //3. 静态内部类
     static class Like1 implements ILike {
-   
-     
-     
         @Override
         public void lamda() {
-   
-     
-     
             System.out.println("I like lamda1");
         }
     }
     //3.静态内部类
     public static void main(String[] args) {
-   
-     
-     
         ILike like = new Like1();
         like.lamda();
     }
@@ -638,6 +541,8 @@ public class Demo10_Lamda1 {
 ```
 
 优化2：
+
+继续简化，把实现类简化成局部内部类
 
 ```java
 public class Demo11_Lamda2 {
@@ -671,23 +576,13 @@ public class Demo11_Lamda2 {
 
 ```java
 public class Demo12_Lamda3 {
-   
-     
-     
+
     public static void main(String[] args) {
-   
-     
-     
+
         //5.匿名内部类，没有类的名称，必须借助接口或者父类
         ILike like = new ILike () {
-   
-     
-     
             @Override
             public void lamda() {
-   
-     
-     
                 System.out.println("I like lamda3");
             }
         };
@@ -701,19 +596,11 @@ public class Demo12_Lamda3 {
 ```java
 public class Demo13_Lamda4 {
    
-     
-     
     public static void main(String[] args) {
-   
-     
-     
+
         //6.lamda简化
-        ILike like = () ->{
-   
-     
-     
-            System.out.println("I like lamda4");
-        };
+        //去除匿名内部类的接口和方法名，只保留方法体和括号，加上 -> 即可
+        ILike like = () -> {System.out.println("I like lamda4");};
         like.lamda();
     }
 }
@@ -1287,7 +1174,7 @@ class You implements Runnable{
 
 ### 🍒1.介绍 
 
-\*\*多个线程操作同一个资源 \*\*
+**多个线程操作同一个资源 **
 
 ![pic_5002e4e3.png](juc.assets/pic_5002e4e3.png)  
 ![pic_a1293957.png](juc.assets/pic_a1293957.png)  
@@ -1299,13 +1186,9 @@ class You implements Runnable{
 ```java
 //不安全买票
 public class Demo24_UnsafeBuyTicket {
-   
-     
-     
+
     public static void main(String[] args) {
-   
-     
-     
+
         BuyTicket buyTicket = new BuyTicket();
         new Thread(buyTicket， "张三").start();
         new Thread(buyTicket， "李四").start();
@@ -1314,32 +1197,19 @@ public class Demo24_UnsafeBuyTicket {
 }
 
 class BuyTicket implements Runnable {
-   
-     
-     
+
     //票
     private int ticketNums = 10;
     boolean flag = true;
 
     @Override
     public void run() {
-   
-     
-     
+
         //买票
         while (flag) {
-   
-     
-     
             try {
-   
-     
-     
                 buy();
             } catch (Exception e) {
-   
-     
-     
                 e.printStackTrace();
             }
         }
@@ -1347,27 +1217,15 @@ class BuyTicket implements Runnable {
 
     //买票
     private void buy() {
-   
-     
-     
         //判断是否有票
         if (ticketNums <= 0) {
-   
-     
-     
             flag = false;
             return;
         }
         //延迟
         try {
-   
-     
-     
             Thread.sleep(1);
         } catch (InterruptedException e) {
-   
-     
-     
             e.printStackTrace();
         }
 
@@ -1382,13 +1240,9 @@ class BuyTicket implements Runnable {
  * 不安全的取钱
  */
 public class Demo25_UnsafeBank {
-   
-     
-     
+
     public static void main(String[] args) {
-   
-     
-     
+
         Account account = new Account(100， "结婚基金");
         Drawing you = new Drawing(account， 50， "展堂");
         Drawing girlfriend = new Drawing(account， 100， "sad");
@@ -1480,9 +1334,7 @@ public class Demo26_UnsafeList {
      
         List<String> list = new ArrayList<String>();
         for (int i = 0; i < 1000; i++) {
-   
-     
-     
+
             new Thread(()->{
    
      
