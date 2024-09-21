@@ -123,24 +123,15 @@ public class Demo2_DownloaderImgCase extends Thread {
 
 //下载器
 class WebDownloader {
-   
-     
-     
+ 
     //下载方法
     public void downloader(String url， String name) {
-   
-     
-     
+
         try {
-   
-     
-     
+
             FileUtils.copyURLToFile(new URL(url)， new File(name));
         } catch (IOException e) {
-   
-     
-     
-            e.printStackTrace();
+    e.printStackTrace();
             System.out.println("IO异常，downloader方法出现问题");
         }
     }
