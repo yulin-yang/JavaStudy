@@ -1690,7 +1690,7 @@ appendfsync everysec # 每秒执行一次 sync，但可能会丢失这1s的数�
 
 具体的配置在持久化中详细讲解
 
-# 七、Redis持久化
+# 七、Redis持久化——RDB 
 
 面试和工作，持久化都是重点！
 
@@ -1698,215 +1698,428 @@ Redis 是内存数据库，如果不将内存中的数据库状态保存到磁�
 
 > 持久化：在指定时间间隔内将内存数据存入磁盘中，断电也能恢复数据，使用快照文件读到内存中。
 
-## 1、RDB(Redis DataBase)
+RDB：读写文件
 
-### 1.1、什么是RDB
+## RDB(Redis DataBase) 
 
-> 在指定的时间间隔内将内存中的数据集快照写入磁盘，也就是行话讲的Snapshot快照，它恢复时是将快 照文件直接读到内存里。
+> 什么是RDB
 
-![image20220324141702115](redis.assets/80e807506b4878d14237ed851856045d.png)
+用在主从复制中，rdb就是备用的，在从机上面。
 
-Redis会单独创建（fork）一个子进程来进行持久化，会先将数据写入到一个临时文件中，待持久化过程 都结束了，再用这个临时文件替换上次持久化好的文件。
+![pic_fd050b25.png](redis.assets/pic_fd050b25.png)
 
-整个过程中，主进程是不进行任何IO操作的。 这就确保了极高的性能。如果需要进行大规模数据的恢复，且对于数据恢复的完整性不是非常敏感，那 RDB方式要比AOF方式更加的高效。RDB的缺点是最后一次持久化后的数据可能丢失。我们默认的就是 RDB，一般情况下不需要修改这个配置！
+在指定的时间间隔内将内存中的数据集快照写入磁盘，也就是行话讲的Snapshot快照，它恢复时是将快照文件直接读到内存里。
+
+Redis会单独创建（fork）一个子进程来进行持久化，会先将数据写入到一个临时文件中，待持久化过程 都结束了，再用这个临时文件替换上次持久化好的文件。整个过程中，主进程是不进行任何IO操作的。 这就确保了极高的性能。如果需要进行大规模数据的恢复，且对于数据恢复的完整性不是非常敏感，那 RDB方式要比AOF方式更加的高效。RDB的缺点是最后一次持久化后的数据可能丢失。我们默认的就是 RDB，一般情况下不需要修改这个配置！
 
 有时候在生产环境我们会将这个文件进行备份！
 
 rdb保存的文件是dump.rdb 都是在我们的配置文件中快照中进行配置的！
 
-> 我们可以自定义自己的rbd
+![pic_83f0b94d.png](redis.assets/pic_83f0b94d.png)
 
-![image20220324141756113](redis.assets/2b7245f22cc1d47fd95e28b7dc8b2458.png)
+### 触发机制 
 
-### 1.2、触发机制
+1.  save的规则满足的情况下，会自动触发rdb原则
+2.  执行flushall命令，也会触发我们的rdb原则
+3.  退出redis，也会自动产生rdb文件
 
-1. save的规则满足的情况下，会自动触发rdb原则
+备份就自动生成一个 dump.rdb
 
-   使用 save 命令，会立刻对当前内存中的数据进行持久化 ,但是会阻塞，也就是不接受其他操作了；
+![pic_acadf21e.png](redis.assets/pic_acadf21e.png)
 
-   > 由于 save 命令是同步命令，会占用Redis的主进程。若Redis数据非常多时，save命令执行速度会非常慢，阻塞所有客户端的请求。
+#### 1.save 
 
-   ![image20220324142131032](redis.assets/787290554c91040ffa7d3d9b20f91dee.png)
+使用 save 命令，会立刻对当前内存中的数据进行持久化 ,但是会阻塞，也就是不接受其他操作了；
 
-2. 执行`flushall`命令，也会触发我们的rdb原则
+> 由于 save 命令是同步命令，会占用Redis的主进程。若Redis数据非常多时，save命令执行速度会非常慢，阻塞所有客户端的请求。
 
-3. 退出redis，也会自动产生rdb文件
+示意图：
 
-备份就自动生成一个 `dump.rdb`
+![pic_9aed81cf.png](redis.assets/pic_9aed81cf.png)
 
-![image20220324142016256](redis.assets/eb6206c8f85dda2a5e70a1c422d46d55.png)
+#### 2.flushall命令 
 
-### 1.3、恢复rdb
+flushall 命令也会触发持久化 ；
 
-1. 只需要将rdb文件放在我们redis启动目录就可以，redis启动的时候会自动检查dump.rdb 恢复其中的数据！
-2. 查看需要存在的位置
+触发持久化规则  
+满足配置条件中的触发条件 ；
 
-```shell
+> 可以通过配置文件对 Redis 进行设置， 让它在“ N 秒内数据集至少有 M 个改动”这一条件被满足时， 自动进行数据集保存操作。
+
+![pic_82ca8ee6.png](redis.assets/pic_82ca8ee6.png)
+
+![pic_447c6bb3.png](redis.assets/pic_447c6bb3.png)
+
+#### 3.bgsave 
+
+bgsave 是异步进行，进行持久化的时候，redis 还可以将继续响应客户端请求 ；
+
+示意图：
+
+![pic_a1724465.png](redis.assets/pic_a1724465.png)
+
+bgsave和save对比
+
+<table> 
+ <thead> 
+  <tr> 
+   <th>命令</th> 
+   <th>save</th> 
+   <th>bgsave</th> 
+  </tr> 
+ </thead> 
+ <tbody> 
+  <tr> 
+   <td>IO类型</td> 
+   <td>同步</td> 
+   <td>异步</td> 
+  </tr> 
+  <tr> 
+   <td>阻塞？</td> 
+   <td>是</td> 
+   <td>是（阻塞发生在fock()，通常非常快）</td> 
+  </tr> 
+  <tr> 
+   <td>复杂度</td> 
+   <td>O(n)</td> 
+   <td>O(n)</td> 
+  </tr> 
+  <tr> 
+   <td>优点</td> 
+   <td>不会消耗额外的内存</td> 
+   <td>不阻塞客户端命令</td> 
+  </tr> 
+  <tr> 
+   <td>缺点</td> 
+   <td>阻塞客户端命令</td> 
+   <td>需要fock子进程，消耗内存</td> 
+  </tr> 
+ </tbody> 
+</table>
+
+> 1.  SAVE:
+>
+>  *  描述：`SAVE` 命令会阻塞 Redis 服务器进程，直到持久化过程完成为止。它会将当前的数据集以同步阻塞方式保存到磁盘上的一个文件中，这个过程会在主进程中进行。
+>  *  特点：
+>
+>      *  阻塞：`SAVE` 命令会阻塞 Redis 服务器进程，直到持久化过程完成。
+>      *  同步：持久化操作是同步执行的，因此会导致服务器停止服务一段时间。
+>  *  优点：
+>
+>      *  简单：`SAVE` 是一个简单的命令，容易理解和使用。
+>      *  数据一致性：在持久化期间，Redis 不接受任何请求，因此可以保证数据一致性。
+>  *  缺点：
+>
+>      *  阻塞：持久化过程会阻塞 Redis 服务器，导致服务器暂时无法处理请求，影响性能。
+>      *  性能问题：对于大型数据库来说，保存整个数据集可能会消耗大量时间和资源。
+>  *  适用场合：适用于小型数据库，或者在数据量不大且可以容忍服务器停止服务一段时间的情况下。
+>
+> 1.  BGSAVE:
+>
+>  *  描述：`BGSAVE` 命令会派生一个子进程，由子进程负责将数据集保存到磁盘上的一个文件中。父进程继续处理请求，不会被阻塞。
+>  *  特点：
+>
+>      *  后台执行：`BGSAVE` 是一个后台执行的命令，不会阻塞 Redis 服务器主进程。
+>      *  异步：持久化操作是异步执行的，不会影响服务器的响应速度。
+>  *  优点：
+>
+>      *  非阻塞：`BGSAVE` 不会阻塞服务器进程，因此不会影响 Redis 服务器的性能。
+>      *  异步：持久化过程在后台执行，不会影响服务器响应请求的能力。
+>  *  缺点：
+>
+>      *  内存占用：`BGSAVE` 使用子进程进行持久化操作，可能会消耗一定的内存资源。
+>      *  可能会失败：在某些情况下，`BGSAVE` 操作可能会因为子进程出错或者其他原因失败。
+>  *  适用场合：适用于大型数据库，或者在不能容忍服务器停止服务的情况下，因为 `BGSAVE` 不会阻塞 Redis 服务器的主进程。
+>
+> 总的来说，如果你的数据库较小，且可以容忍短暂的服务停止，那么使用 `SAVE` 是一个简单的选择。但如果你的数据库较大，或者不能容忍服务停止，那么最好使用 `BGSAVE`。
+
+#### 4.如何恢复rdb文件！ 
+
+1、只需要将rdb文件放在我们redis启动目录就可以，redis启动的时候会自动检查dump.rdb 恢复其中的数据！  
+2、查看需要存在的位置
+
+```java
 127.0.0.1:6379> config get dir
 1) "dir"
 2) "/usr/local/bin" # 如果在这个目录下存在 dump.rdb 文件，启动就会自动恢复其中的数据
 ```
 
-### 1.4、优缺点
+#### 5.优缺点 
 
-**优点：**
+> 优点：
 
-1. 适合大规模的数据恢复
-2. 对数据的完整性要求不高
-3. RDB持久化生成的快照文件紧凑，适合用于备份和恢复数据。
-4. 在数据恢复时，由于快照是全量的，恢复速度相对较快。
+1.  适合大规模的数据恢复
+2.  对数据的完整性要求不高
 
-**缺点：**
+> 缺点：
 
-1. 需要一定的时间间隔进行操作，如果redis意外宕机了，这个最后一次修改的数据就没有了。
-2. fork进程的时候，会占用一定的内容空间。
-3. RDB持久化是全量备份，如果Redis进程意外终止，可能会丢失最后一次快照生成后的数据。
-4. 对于大型数据集，生成快照会消耗较多的CPU和IO资源，可能会影响Redis的性能。
-5. RDB持久化无法实现实时备份，只能通过定期生成快照的方式来保证数据的持久化。
+1.  需要一定的时间间隔进行操作，如果redis意外宕机了，这个最后一次修改的数据就没有了。
+2.  fork进程的时候，会占用一定的内容空间。
 
-总的来说，RDB持久化适合对数据一致性要求不是特别高、需要定期备份的场景。对于要求实时持久化并且能够容忍一定数据丢失的场景，AOF持久化更为适合。
+> 优点：
+>
+>  *  RDB持久化生成的快照文件紧凑，适合用于备份和恢复数据。
+>  *  在数据恢复时，由于快照是全量的，恢复速度相对较快。
+>
+> 缺点：
+>
+>  *  RDB持久化是全量备份，如果Redis进程意外终止，可能会丢失最后一次快照生成后的数据。
+>  *  对于大型数据集，生成快照会消耗较多的CPU和IO资源，可能会影响Redis的性能。
+>  *  RDB持久化无法实现实时备份，只能通过定期生成快照的方式来保证数据的持久化。
+>
+> 总的来说，RDB持久化适合对数据一致性要求不是特别高、需要定期备份的场景。对于要求实时持久化并且能够容忍一定数据丢失的场景，AOF持久化更为适合。
 
-## 2、AOF(Append-Only File)
+# 八、Redis 持久化——AOF 
 
-### 2.1、什么是AOF
+AOF（Append-Only File）(记录文件)
 
-> 将我们的所有命令都记录下来，类似于给了一个history，恢复的时候就把这个文件全部在执行一遍！
+将我们的所有命令都记录下来，history，恢复的时候就把这个文件全部在执行一遍！
 
-![image20220324190240629](redis.assets/f42e6b503f8126cd9b68f1bed3943079.png)
+> AOF 是什么
 
-以日志的形式来记录每个写操作，将Redis执行过的所有指令记录下来（读操作不记录），只许追加文件 但不可以改写文件，redis启动之初会读取该文件重新构建数据.
+![pic_699fe8f6.png](redis.assets/pic_699fe8f6.png)
 
-换言之，redis重启的话就根据日志文件 的内容将写指令从前到后执行一次以完成数据的恢复工作
+以日志的形式来记录每个写操作，将Redis执行过的所有指令记录下来（读操作不记录），只许追加文件 但不可以改写文件，redis启动之初会读取该文件重新构建数据，换言之，redis重启的话就根据日志文件 的内容将写指令从前到后执行一次以完成数据的恢复工作
 
-Aof保存的是 `appendonly.aof` 文件
+Aof保存的是 appendonly.aof 文件
 
-### 2.2、配置
+> append
 
-> 默认情况下是不开启AOF的，如果要开启需要手动将 `appendonly` 修改为 `yes`
+![pic_3be6022f.png](redis.assets/pic_3be6022f.png)
 
-![image20220324190425627](redis.assets/a6be2bae865eae8d0ead708f531561b5.png)
+默认是不开启的，我们需要手动进行配置！我们只需要将 appendonly 改为yes就开启了 aof！
 
-修改后我们重启`redis`，就会出现 `appendonly.aof`文件
+重启，redis 就可以生效了！ 如果这个 aof 文件有错位，这时候 redis 是启动不起来的吗，我们需要修复这个aof文件
 
-![image20220324193341798](redis.assets/b0b74fb43a63859e6fc3b1e3f39fb401.png)
+开启后会生成appendonly.aof文件
 
-这个时候我们进行一些写入操作
+![pic_c7ec9bb6.png](redis.assets/pic_c7ec9bb6.png)
 
-![image20220324193458390](redis.assets/b8ff289a5e32b375a1f1d790e4f6cdff.png)
+在里面写入数据后
 
-然后打开`appendonly.aof`查看，会发现已经记录下来了
+![pic_4baa7b4c.png](redis.assets/pic_4baa7b4c.png)
 
-![image20220324193451343](redis.assets/89313f01dcefadb045a5cf32752123fa.png)
+看 appendonly.aof 里面会有 写数据的记录
 
-此时如果我们人为的对`appendonly.aof`进行了修改，会导致无法启动`redis`
+![pic_e4afa441.png](redis.assets/pic_e4afa441.png)
 
-![image20220324194107333](redis.assets/cc5ebb0aad6ab7557551eda213918d09.png)
+如果这个aof文件有错误，这时候redis是启动不起来的，需要我们修复这个aof文件
 
-`redis`给我们提供了一个工具 `redis-check-aof --fix`，来对备份文件进行修复操作
+redis给我们提供了一个工具 `redis-check-aof --fix`
 
-![image20220324194359390](redis.assets/aa1bc5b1a3309024be80a6c211c3ce52.png)
+aof配置文件出错，连接时会出现这个问题
+
+![pic_13139105.png](redis.assets/pic_13139105.png)
+
+用redis-check-aof --fix 进行恢复
+
+![pic_0aed7601.png](redis.assets/pic_0aed7601.png)
 
 如果文件正常，重启就可以直接恢复了
 
-![image20220324194427748](redis.assets/f2e55c3c24c2489bef8abd8d2b0a243a.png)
+![pic_5d7258ff.png](redis.assets/pic_5d7258ff.png)
 
-### 2.3、重写规则
+> 重写规则说明
 
 aof 默认就是文件的无限追加，文件会越来越大！
 
-![image20220324195337310](redis.assets/9133b9aaa2ce2a00b9c12958182dceaa.png)
+![pic_805c6dd4.png](redis.assets/pic_805c6dd4.png)
 
 如果 aof 文件大于 64m，太大了！ fork一个新的进程来将我们的文件进行重写！
 
-```shell
+> 优点和缺点！
+
+```java
 appendonly no # 默认是不开启aof模式的，默认是使用rdb方式持久化的，在大部分所有的情况下，
 rdb完全够用！
 appendfilename "appendonly.aof" # 持久化的文件的名字
-# appendfsync always # 每次修改都会 sync。消耗性能,文件的完整会更加好！
+# appendfsync always # 每次修改都会 sync。消耗性能
 appendfsync everysec # 每秒执行一次 sync，可能会丢失这1s的数据！
-# appendfsync no # 不执行 sync，这个时候操作系统自己同步数据，速度最快！ 从不同步，效率最高的！
+# appendfsync no # 不执行 sync，这个时候操作系统自己同步数据，速度最快！
 # rewrite 重写，
 ```
 
-### 2.4、优缺点
+### 优点 
 
-> **优点：**
+1、每一次修改都同步，文件的完整会更加好！
+
+2、每秒同步一次，可能会丢失一秒的数据
+
+3、从不同步，效率最高的！
+
+### 缺点 
+
+1、相对于数据文件来说，aof远远大于 rdb，修复的速度也比 rdb慢！
+
+2、Aof 运行效率也要比 rdb 慢，所以我们redis默认的配置就是rdb持久化！
+
+### 扩展： 
+
+1、RDB 持久化方式能够在指定的时间间隔内对你的数据进行快照存储
+
+2、AOF 持久化方式记录每次对服务器写的操作，当服务器重启的时候会重新执行这些命令来恢复原始 的数据，AOF命令以Redis 协议追加保存每次写的操作到文件末尾，Redis还能对AOF文件进行后台重 写，使得AOF文件的体积不至于过大。
+
+3、只做缓存，如果你只希望你的数据在服务器运行的时候存在，你也可以不使用任何持久化
+
+4、同时开启两种持久化方式
+
+ *  在这种情况下，当redis重启的时候会优先载入AOF文件来恢复原始的数据，因为在通常情况下AOF 文件保存的数据集要比RDB文件保存的数据集要完整。
+ *  RDB 的数据不实时，同时使用两者时服务器重启也只会找AOF文件，那要不要只使用AOF呢？作者 建议不要，因为RDB更适合用于备份数据库（AOF在不断变化不好备份），快速重启，而且不会有 AOF可能潜在的Bug，留着作为一个万一的手段。
+
+5、性能建议
+
+ *  因为RDB文件只用作后备用途，建议只在Slave上持久化RDB文件，而且只要15分钟备份一次就够 了，只保留 save 900 1 这条规则。
+ *  如果Enable AOF ，好处是在最恶劣情况下也只会丢失不超过两秒数据，启动脚本较简单只load自 己的AOF文件就可以了，代价一是带来了持续的IO，二是AOF rewrite 的最后将 rewrite 过程中产 生的新数据写到新文件造成的阻塞几乎是不可避免的。只要硬盘许可，应该尽量减少AOF rewrite 的频率，AOF重写的基础大小默认值64M太小了，可以设到5G以上，默认超过原大小100%大小重 写可以改到适当的数值。
+ *  如果不Enable AOF ，仅靠 Master-Slave Repllcation 实现高可用性也可以，能省掉一大笔IO，也 减少了rewrite时带来的系统波动。代价是如果Master/Slave 同时倒掉，会丢失十几分钟的数据， 启动脚本也要比较两个 Master/Slave 中的 RDB文件，载入较新的那个，微博就是这种架构。
+
+> 优点：
 >
-> 1. 可读性高：AOF文件是以文本形式保存的，易于理解和调试。
-> 2. 容灾性强：AOF文件记录了所有写操作命令，因此可以更可靠地恢复数据。
-> 3. 适用于追加操作：AOF采用追加方式记录写操作，因此对于磁盘的IO消耗相对较低。
+>  *  可读性高：AOF文件是以文本形式保存的，易于理解和调试。
+>  *  容灾性强：AOF文件记录了所有写操作命令，因此可以更可靠地恢复数据。
+>  *  适用于追加操作：AOF采用追加方式记录写操作，因此对于磁盘的IO消耗相对较低。
 >
-> **缺点：**
+> 缺点：
 >
-> 1. 文件较大：由于AOF文件保存了每个写操作命令，因此可能会比RDB生成的快照文件更大。
-> 2. 恢复速度较慢：由于Redis在启动时需要重新执行AOF文件中的所有写操作，因此恢复速度可能比RDB快照方式慢。
-> 3. 重写可能会耗时：AOF重写过程可能会耗费一定的时间和资源，尤其是在数据集较大时。
+>  *  文件较大：由于AOF文件保存了每个写操作命令，因此可能会比RDB生成的快照文件更大。
+>  *  恢复速度较慢：由于Redis在启动时需要重新执行AOF文件中的所有写操作，因此恢复速度可能比RDB快照方式慢。
+>  *  重写可能会耗时：AOF重写过程可能会耗费一定的时间和资源，尤其是在数据集较大时。
+>
+> #### 配置AOF持久化 
+>
+> 在Redis的配置文件中，可以通过以下参数配置AOF持久化：
+>
+>  *  `appendonly yes/no`：是否开启AOF持久化，默认为no。
+>  *  `appendfilename`：AOF文件的文件名，默认为appendonly.aof。
+>  *  `appendfsync always/everysec/no`：控制何时将写入操作同步到磁盘，可选值有always（每个写入操作都会同步到磁盘）、everysec（每秒同步一次）和no（不同步）。
+>  *  `auto-aof-rewrite-percentage`：触发AOF重写的百分比，默认为100。
+>  *  `auto-aof-rewrite-min-size`：AOF文件大小超过该值时，触发AOF重写，默认为64MB。
+>
+> #### 适用场景 
+>
+>  *  数据可靠性要求高：AOF持久化记录了每个写操作命令，因此在数据可靠性要求较高的场景下更为适用。
+>  *  追加操作频繁：AOF持久化采用追加方式记录写操作，适用于写操作频繁的场景。
+>  *  可读性要求高：AOF文件是以文本形式保存的，易于理解和调试，适用于需要对持久化数据进行查看和修改的场景。
 
-### 2.5、适用场景
+> AOF重写是Redis中的一项机制，旨在解决AOF持久化过程中可能出现的文件膨胀和性能问题。在AOF持久化过程中，随着Redis接收到写操作命令的不断累积，AOF文件会不断增长，可能会导致文件体积过大，影响性能和占用过多的磁盘空间。AOF重写机制的作用是生成一个新的AOF文件，该文件与当前数据集的状态相同，但是文件体积更小，仍然能够完整地恢复数据集。
+>
+> #### AOF重写的工作原理 
+>
+> 1.  生成新的AOF文件：
+>
+>  *  AOF重写过程由后台线程完成，不会阻塞主进程。该线程会遍历当前数据集的所有键值对，并生成一系列写命令，这些命令可以完整地重现当前数据集的状态。
+>
+> 1.  记录生成过程：
+>
+>  *  在生成新的AOF文件时，Redis会记录当前服务器接收到的所有写命令。这些命令不是原始的客户端写命令，而是生成新AOF文件所需的最少的写命令序列。
+>
+> 1.  保留最近一次完整写命令序列：
+>
+>  *  在AOF重写过程中，Redis会记录生成新AOF文件所需的写命令序列。一旦重写完成，Redis会将这个写命令序列写入新的AOF文件中，代替旧的AOF文件。
+>
+> 1.  切换AOF文件：
+>
+>  *  当新AOF文件生成完毕并写入完成后，Redis会原子性地将旧的AOF文件替换为新的AOF文件。这样就完成了AOF重写。
+>
+> #### AOF重写的优点 
+>
+>  *  降低AOF文件体积：由于AOF重写只记录当前数据集的状态，因此生成的新AOF文件体积通常会小于原始AOF文件。
+>  *  减少写操作记录：AOF重写只记录生成新AOF文件所需的最少的写命令序列，而不是全部历史写命令，因此能够降低AOF文件的体积。
+>  *  提升性能：AOF重写过程由后台线程完成，不会阻塞主进程，因此不会影响Redis的正常响应速度。
 
-> - **数据可靠性要求高**：AOF持久化记录了每个写操作命令，因此在数据可靠性要求较高的场景下更为适用。
-> - **追加操作频繁**：AOF持久化采用追加方式记录写操作，适用于写操作频繁的场景。
-> - **可读性要求高**：AOF文件是以文本形式保存的，易于理解和调试，适用于需要对持久化数据进行查看和修改的场景。
+> auto-aof-rewrite-percentage：触发AOF重写的AOF文件体积增长百分比，默认为100%。
+>
+> 这个配置项指定了触发AOF重写的AOF文件体积增长的百分比阈值。默认情况下，这个值是100%，意味着当AOF文件的体积增长到原始AOF文件的大小的两倍时，Redis就会触发AOF重写过程。
+>
+> 举个例子来说，假设初始时AOF文件的大小是100MB。如果设置了默认的100%阈值，那么当AOF文件的大小增长到200MB时，就会触发AOF重写。这样做的目的是为了在AOF文件不断增长时，及时触发AOF重写，以防止AOF文件变得过大影响性能或占用过多的磁盘空间。
 
+# 九、RDB和AOF选择 
 
+#### RDB 和 AOF 对比 
 
-## 3、扩展
+<table> 
+ <thead> 
+  <tr> 
+   <th></th> 
+   <th>RDB</th> 
+   <th>AOF</th> 
+  </tr> 
+ </thead> 
+ <tbody> 
+  <tr> 
+   <td>启动优先级</td> 
+   <td>低</td> 
+   <td>高</td> 
+  </tr> 
+  <tr> 
+   <td>体积</td> 
+   <td>小</td> 
+   <td>大</td> 
+  </tr> 
+  <tr> 
+   <td>恢复速度</td> 
+   <td>快</td> 
+   <td>慢</td> 
+  </tr> 
+  <tr> 
+   <td>数据安全性</td> 
+   <td>丢数据</td> 
+   <td>根据策略决定</td> 
+  </tr> 
+ </tbody> 
+</table>
 
-1. RDB 持久化方式能够在指定的时间间隔内对你的数据进行快照存储
+#### 如何选择使用哪种持久化方式？ 
 
-2. AOF 持久化方式记录每次对服务器写的操作，当服务器重启的时候会重新执行这些命令来恢复原始 的数据，AOF命令以Redis 协议追加保存每次写的操作到文件末尾，Redis还能对AOF文件进行后台重 写，使得AOF文件的体积不至于过大
+一般来说， 如果想达到足以媲美 PostgreSQL 的数据安全性， 你应该同时使用两种持久化功能。
 
-3. 只做缓存，如果你只希望你的数据在服务器运行的时候存在，你也可以不使用任何持久化
+如果你非常关心你的数据， 但仍然可以承受数分钟以内的数据丢失， 那么你可以只使用 RDB 持久化。
 
-4. 同时开启两种持久化方式
+有很多用户都只使用 AOF 持久化， 但并不推荐这种方式： 因为定时生成 RDB 快照（snapshot）非常便于进行数据库备份， 并且 RDB 恢复数据集的速度也要比 AOF 恢复的速度要快。
 
-   在这种情况下，当redis重启的时候会优先载入AOF文件来恢复原始的数据，因为在通常情况下AOF 文件保存的数据集要比RDB文件保存的数据集要完整。
-   RDB 的数据不实时，同时使用两者时服务器重启也只会找AOF文件，那要不要只使用AOF呢？作者 建议不要，因为RDB更适合用于备份数据库（AOF在不断变化不好备份），快速重启，而且不会有 AOF可能潜在的Bug，留着作为一个万一的手段。
+![pic_76a30f8c.png](redis.assets/pic_76a30f8c.png)
 
-5. 性能建议
+> 1.  首先，需要创建 RDB 文件的备份，通常是最新的 `dump.rdb` 文件。这是为了确保数据安全。
+> 2.  将备份文件保存在一个安全的地方，以防意外情况发生时需要还原数据。
+> 3.  通过执行以下两个命令来完成切换持久化方式：首先，使用 `CONFIG SET appendonly yes` 命令开启 AOF 功能；然后，使用 `CONFIG SET save ""` 命令关闭 RDB 功能。这样做之后，Redis 就会开始将写入命令追加到 AOF 文件中，并不再执行 RDB 快照持久化。
+> 4.  确保执行完上述命令后，数据库中的键数量没有发生变化，以确保数据持久化的完整性。
+> 5.  确保写入命令会被正确地追加到 AOF 文件的末尾，以确保持久化的有效性。
+>
+> 在步骤3中，第一个命令执行后，Redis 会阻塞直到初始 AOF 文件创建完成为止。这意味着 Redis 会等待 AOF 文件完全初始化之后才会继续处理其他命令请求。一旦 AOF 文件初始化完成，Redis 就会开始将写入命令追加到 AOF 文件末尾。
+>
+> 第二个命令则是可选的，用于关闭 RDB 功能。如果你愿意的话，你可以同时使用 RDB 和 AOF 这两种持久化功能。然而，需要确保在 `redis.conf` 配置文件中打开 AOF 功能，以防止服务器重启后之前通过 `CONFIG SET` 命令设置的配置被遗忘，导致服务器按照原来的配置启动。
 
-   因为RDB文件只用作后备用途，建议只在Slave上持久化RDB文件，而且只要15分钟备份一次就够 了，只保留 save 900 1 这条规则。
-   如果Enable AOF ，好处是在最恶劣情况下也只会丢失不超过两秒数据，启动脚本较简单只load自 己的AOF文件就可以了，代价一是带来了持续的IO，二是AOF rewrite 的最后将 rewrite 过程中产 生的新数据写到新文件造成的阻塞几乎是不可避免的。只要硬盘许可，应该尽量减少AOF rewrite 的频率，AOF重写的基础大小默认值64M太小了，可以设到5G以上，默认超过原大小100%大小重 写可以改到适当的数值。
-   如果不Enable AOF ，仅靠 Master-Slave Repllcation 实现高可用性也可以，能省掉一大笔IO，也 减少了rewrite时带来的系统波动。代价是如果Master/Slave 同时倒掉，会丢失十几分钟的数据， 启动脚本也要比较两个 Master/Slave 中的 RDB文件，载入较新的那个，微博就是这种架构。
+# 十、Redis订阅发布 
 
-# 八、Redis发布订阅
-
-## 1、什么是发布订阅
-
-Redis 发布订阅(pub/sub)是一种消息通信模式：
-
-- 发送者(pub)发送消息
-- 订阅者(sub)接收消息。
-
-如：微信、 微博、关注系统！
+Redis 发布订阅(pub/sub)是一种消息通信模式：发送者(pub)发送消息，订阅者(sub)接收消息。如：微信、 微博、关注系统！
 
 Redis 客户端可以订阅任意数量的频道。
 
 订阅/发布消息图：
 
-![image20220324200807753](redis.assets/a61751e5dac429806ac6a7f9d9a496fe.png)
+第一个：消息发送者， 第二个：频道 第三个：消息订阅者！
 
-这里面存在三个重要角色：第一个：消息发送者， 第二个：频道 第三个：消息订阅者！
+![pic_683277ae.png](redis.assets/pic_683277ae.png)
 
 下图展示了频道 channel1 ， 以及订阅这个频道的三个客户端 —— client2 、 client5 和 client1 之间的 关系：
 
-![image20220324200851719](redis.assets/d1fa2f9e520b855e81a1a1c714d46122.png)
+![pic_4ddeb16c.png](redis.assets/pic_4ddeb16c.png)
 
 当有新消息通过 PUBLISH 命令发送给频道 channel1 时， 这个消息就会被发送给订阅它的三个客户端：
 
-![image20220324200915239](redis.assets/fb6b0fa6a47ef1309fcbb859bd5b1be6.png)
+![pic_3494eaf3.png](redis.assets/pic_3494eaf3.png)
 
-## 2、命令
+> 命令
 
 这些命令被广泛用于构建即时通信应用，比如网络聊天室(chatroom)和实时广播、实时提醒等。
 
-![image20220324200954082](redis.assets/2090609fe8daa5ea22d55dd8ed031f9f.png)
+![pic_c0d74f12.png](redis.assets/pic_c0d74f12.png)
 
-## 3、测试
+> 测试
 
-> 订阅端
+订阅端：
 
-```shell
+```java
 127.0.0.1:6379> SUBSCRIBE jihu2  #订阅一个频道jihu2
 Reading messages... (press Ctrl-C to quit)
 1) "subscribe"
@@ -1921,9 +2134,9 @@ Reading messages... (press Ctrl-C to quit)
 3) "hello redis"
 ```
 
-> 发布端
+发送端：
 
-```shell
+```java
 [root@localhost bin]# redis-cli -p 6379 #发布者发布消息到频道
 127.0.0.1:6379> PUBLISH jihu2 "hello beauty women"  #发布者发布消息到频道
 (integer) 1
@@ -1931,34 +2144,1126 @@ Reading messages... (press Ctrl-C to quit)
 (integer) 1
 ```
 
-当发布端发送消息后，订阅段会自动地接受消息。
-
-## 4、原理
+> 原理
 
 Redis是使用C实现的，通过分析 Redis 源码里的 pubsub.c 文件，了解发布和订阅机制的底层实现，籍此加深对 Redis 的理解。
 
-Redis 通过 `PUBLISH` 、`SUBSCRIBE` 和` PSUBSCRIBE` 等命令实现发布和订阅功能。
+Redis 通过 PUBLISH 、SUBSCRIBE 和 PSUBSCRIBE 等命令实现发布和订阅功能。
 
-> 通过 SUBSCRIBE 命令订阅某频道后，redis-server 里维护了一个字典，字典的键就是一个个 频道！而字典的值则是一个链表，链表中保存了所有订阅这个 channel 的客户端。SUBSCRIBE 命令的关键， 就是将客户端添加到给定 channel 的订阅链表中。
->
-> 通过 PUBLISH 命令向订阅者发送消息，redis-server 会使用给定的频道作为键，在它所维护的 channel 字典中查找记录了订阅这个频道的所有客户端的链表，遍历这个链表，将消息发布给所有订阅者。
+微信：
 
-![image20220324202031676](redis.assets/432849ff2942fc26a9a6e74ba863fd64.png)
+通过 SUBSCRIBE 命令订阅某频道后，redis-server 里维护了一个字典，字典的键就是一个个 频道！， 而字典的值则是一个链表，链表中保存了所有订阅这个 channel 的客户端。SUBSCRIBE 命令的关键， 就是将客户端添加到给定 channel 的订阅链表中。
 
-## 5、缺点
+![pic_bc71602f.png](redis.assets/pic_bc71602f.png)
 
-> 1. 如果一个客户端订阅了频道，但自己读取消息的速度却不够快的话，那么不断积压的消息会使redis输出缓冲区的体积变得越来越大，这可能使得redis本身的速度变慢，甚至直接崩溃。
-> 2. 这和数据传输可靠性有关，如果在订阅方断线，那么他将会丢失所有在短线期间发布者发布的消息。
+通过 PUBLISH 命令向订阅者发送消息，redis-server 会使用给定的频道作为键，在它所维护的 channel 字典中查找记录了订阅这个频道的所有客户端的链表，遍历这个链表，将消息发布给所有订阅者。
 
-## 6、使用场景
+> 缺点
+
+1.  如果一个客户端订阅了频道，但自己读取消息的速度却不够快的话，那么不断积压的消息会使redis输出缓冲区的体积变得越来越大，这可能使得redis本身的速度变慢，甚至直接崩溃。
+2.  这和数据传输可靠性有关，如果在订阅方断线，那么他将会丢失所有在短线期间发布者发布的消息。
+
+> 使用场景
 
 1、实时消息系统！
 
-2、实时聊天！（频道当做聊天室，将信息回显给所有人即可！）
+2、事实聊天！（频道当做聊天室，将信息回显给所有人即可！）
 
 3、订阅，关注系统都是可以的！
 
 稍微复杂的场景，我们就会使用消息中间件MQ处理。
 
-# 九、主从复制
+> 当使用 Java 实现 Redis 的发布订阅功能时，我们需要使用 Redis 官方提供的 Java 客户端库 Jedis。确保你已经将 Jedis 添加到项目依赖中。
+>
+> 下面我将编写两个 Java 类，一个作为发布者，另一个作为订阅者。  
+> 发布者（Publisher）
+>
+> ```java
+> import redis.clients.jedis.Jedis;
+> 
+> public class Publisher {
+>     
+> public static void main(String[] args) {
+> 
+>    // 连接到本地 Redis 服务器
+>   Jedis jedis = new Jedis("localhost");
+>   // 模拟发布消息到频道
+>   for (int i = 0; i < 5; i++) {
+>          String message = "News Update " + i;
+>          jedis.publish("news", message);
+>       System.out.println("Published '" + message + "' to channel 'news'");
+>          try {
+>              Thread.sleep(1000); // 模拟消息发布间隔
+>       } catch (InterruptedException e) {
+>           e.printStackTrace();
+>       }
+>      }
+>    
+>      // 关闭连接
+>      jedis.close();
+> }
+> }
+> ```
+>    
+>    这段代码连接到本地 Redis 服务器，然后模拟发布了 5 条消息到名为 ‘news’ 的频道，并且在控制台上打印了发布的消息内容。  
+> 订阅者（Subscriber）
+> 
+> ```java
+>    import redis.clients.jedis.Jedis;
+>    import redis.clients.jedis.JedisPubSub;
+>    
+> public class Subscriber {
+>    public static void main(String[] args) {
+>      // 连接到本地 Redis 服务器
+>    Jedis jedis = new Jedis("localhost");
+>   // 订阅消息
+>   jedis.subscribe(new JedisPubSub() {
+>      @Override
+>       public void onMessage(String channel, String message) {
+>           System.out.println("Received message: " + message);
+>      }
+>   }, "news");
+> }
+> }
+> ```
+> 
+> 这段代码连接到本地 Redis 服务器，然后订阅了名为 ‘news’ 的频道，并且实现了 onMessage 方法来处理接收到的消息，在控制台上打印出来。  
+> 运行代码  
+> 确保 Redis 服务器正在运行，然后在不同的终端中分别运行发布者和订阅者的 Java 类，你会看到订阅者接收到发布者发布的消息。  
+>  通过这种方式，你可以在 Java 中使用 Redis 的发布订阅功能，实现消息的发布和订阅。
 
+# 十一、Redis主从复制 
+
+#### 概念 
+
+主从复制，是指将一台Redis服务器的数据，复制到其他的Redis服务器。前者称为主节点 (master/leader)，后者称为从节点(slave/follower)；数据的复制是单向的，只能由主节点到从节点。 Master以写为主，Slave 以读为主。
+
+默认情况下，每台Redis服务器都是主节点;
+
+且一个主节点可以有多个从节点(或没有从节点)，但一个从节点只能有一个主节点。
+
+主从复制的作用主要包括：
+
+1. **数据冗余：**主从复制实现了数据的热备份，是持久化之外的一种数据冗余方式。
+2. **故障恢复：**当主节点出现问题时，可以由从节点提供服务，实现快速的故障恢复；实际上是一种服务 的冗余。
+3. **负载均衡：**在主从复制的基础上，配合读写分离，可以由主节点提供写服务，由从节点提供读服务 （即写Redis数据时应用连接主节点，读Redis数据时应用连接从节点），分担服务器负载；尤其是在写 少读多的场景下，通过多个从节点分担读负载，可以大大提高Redis服务器的并发量。
+4. **高可用（集群）基石：**除了上述作用以外，主从复制还是哨兵和集群能够实施的基础，因此说主从复 制是Redis高可用的基础
+
+一般来说，要将Redis运用于工程项目中，只使用一台Redis是万万不能的（宕机），原因如下：
+
+- 从结构上，单个Redis服务器会发生单点故障，并且一台服务器需要处理所有的请求负载，压力较 大；
+
+- 从容量上，单个Redis服务器内存容量有限，就算一台Redis服务器内存容量为256G，也不能将所有 内存用作Redis存储内存，一般来说，单台Redis最大使用内存不应该超过20G。
+
+电商网站上的商品，一般都是一次上传，无数次浏览的，说专业点也就是"多读少写"。
+
+对于这种场景，我们可以使如下这种架构：
+
+![pic_658200ea.png](redis.assets/pic_658200ea.png)
+
+主从复制，读写分离！ 80% 的情况下都是在进行读操作！减缓服务器的压力！架构中经常使用！ 一主 二从！
+
+只要在公司中，主从复制就是必须要使用的，因为在真实的项目中不可能单机使用Redis！
+
+#### 环境配置 
+
+只配置从库，不用配置主库！
+
+```bash
+127.0.0.1:6379> info replication  #查看当前库的信息
+# Replication
+role:master   #角色  master
+connected_slaves:0  # 0 表示没有从机
+master_failover_state:no-failover
+master_replid:f80a04ead679af98a1c84518b78e529a0a33c986
+master_replid2:0000000000000000000000000000000000000000
+master_repl_offset:0
+second_repl_offset:-1
+repl_backlog_active:0
+repl_backlog_size:1048576
+repl_backlog_first_byte_offset:0
+repl_backlog_histlen:0
+```
+
+复制3个配置文件，然后修改对应的信息
+
+要想改一个启动项
+
+要改以下四步： ( redis80.confshu ）
+
+1.  端口 
+1.  pid名字
+1.  log文件名字 
+1.  dump.rdb 名字
+
+![pic_7aae059f.png](redis.assets/pic_7aae059f.png)
+
+![pic_8858a90c.png](redis.assets/pic_8858a90c.png)
+
+![pic_dcc6f598.png](redis.assets/pic_dcc6f598.png)
+
+修改完毕后，启动我们的3个redis服务器，可以通过进程信息查看
+
+![pic_614cb77d.png](redis.assets/pic_614cb77d.png)
+
+#### 一主二从 
+
+默认情况下，每台Redis服务器都是主节点; 我们一般情况下只用配置从机就好了。
+
+主（79） 二从( 80 , 81 )
+
+从机中查看：
+
+```bash
+127.0.0.1:6380> SLAVEOF 127.0.0.1 6379   #SLAVEOF host 6379  找谁当自己的老大
+OK
+127.0.0.1:6380> info repilcation
+127.0.0.1:6380> info replication
+# Replication
+role:slave   #当前角色是从机
+master_host:127.0.0.1   #可以看到主机的信息
+master_port:6379
+master_link_status:up
+master_last_io_seconds_ago:3
+master_sync_in_progress:0
+slave_read_repl_offset:28
+slave_repl_offset:28
+slave_priority:100
+slave_read_only:1
+replica_announced:1
+connected_slaves:0
+master_failover_state:no-failover
+master_replid:a0e8a30728e95d67d6b191795452ea27b934ba67
+master_replid2:0000000000000000000000000000000000000000
+master_repl_offset:28
+second_repl_offset:-1
+repl_backlog_active:1
+repl_backlog_size:1048576
+repl_backlog_first_byte_offset:1
+repl_backlog_histlen:28
+```
+
+主机中查看(此时两个从机都配置完毕了)：
+
+```bash
+127.0.0.1:6379> info replication
+# Replication
+role:master
+connected_slaves:2   #多了从机的配置
+slave0:ip=127.0.0.1,port=6380,state=online,offset=196,lag=0  #多了从机的配置
+slave1:ip=127.0.0.1,port=6381,state=online,offset=196,lag=1
+master_failover_state:no-failover
+master_replid:a0e8a30728e95d67d6b191795452ea27b934ba67
+master_replid2:0000000000000000000000000000000000000000
+master_repl_offset:196
+second_repl_offset:-1
+repl_backlog_active:1
+repl_backlog_size:1048576
+repl_backlog_first_byte_offset:1
+repl_backlog_histlen:196
+```
+
+真实的主从配置应该在配置文件中配置，这样的话是永久的，我们这里使用的是命令是暂时的。
+
+这里是在配置文件中配置 主从信息
+
+![pic_90ded70f.png](redis.assets/pic_90ded70f.png)
+
+> 细节
+
+主机可以写，从机不能写只能读。 主机中的所有信息和数据，都会自动被从机保存。
+
+主机写：
+
+![pic_3223d622.png](redis.assets/pic_3223d622.png)
+
+从机只能读取内容
+
+![pic_89aaf573.png](redis.assets/pic_89aaf573.png)
+
+测试：主机断开连接，从机依旧连接到主机的，但是没有写操作，这个时候，主机如果回来了，从机依 旧可以直接获取到主机写的信息！
+
+如果是使用命令行，来配置的主从，这个时候如果重启了，就会变回主机！只要变为从机，立马就会从 主机中获取值！
+
+> 赋值原理
+
+Slave 启动成功连接到 master 后会发送一个sync同步命令
+
+Master 接到命令，启动后台的存盘进程，同时收集所有接收到的用于修改数据集命令，在后台进程执行 完毕之后，master将传送整个数据文件到slave，并完成一次完全同步。
+
+全量复制：而slave服务在接收到数据库文件数据后，将其存盘并加载到内存中。
+
+增量复制：Master 继续将新的所有收集到的修改命令依次传给slave，完成同步
+
+但是只要是重新连接master，一次完全同步（全量复制）将被自动执行！ 我们的数据一定可以在从机中看到！
+
+> 层层链路
+
+上一个M链接下一个 S！
+
+![pic_d4b915ab.png](redis.assets/pic_d4b915ab.png)
+
+这时候也可以完成我们的主从复制！
+
+> 如果没有老大了，这个时候能不能选择一个老大出来呢？ 需手动设置！
+
+谋朝篡位
+
+如果主机断开了连接，我们可以使用`SLAVEOF no one` 让自己变成主机！其他的节点就可以手动连 接到最新的这个主节点（手动）！ 如果这个时候老大修复了，那就重新连接！
+
+# 十二、哨兵模式 
+
+（自动选举老大的模式）
+
+> 概述
+
+主从切换技术的方法是：当主服务器宕机后，需要手动把一台从服务器切换为主服务器，这就需要人工 干预，费事费力，还会造成一段时间内服务不可用。这不是一种推荐的方式，更多时候，我们优先考虑 哨兵模式。Redis从2.8开始正式提供了`Sentinel`（哨兵） 架构来解决这个问题。
+
+谋朝篡位的自动版，能够后台监控主机是否故障，如果故障了根据投票数自动将从库转换为主库。
+
+哨兵模式是一种特殊的模式，首先Redis提供了哨兵的命令，哨兵是一个独立的进程，作为进程，它会独立运行。其原理是哨兵通过发送命令，等待Redis服务器响应，从而监控运行的多个Redis实例。
+
+> Redis中的哨兵模式是一种用于实现高可用性（high availability）的机制。在Redis中，哨兵（Sentinel）是一个独立的进程，负责监控主数据库（master）和从数据库（slave），并在主数据库失效时自动将一个从数据库提升为新的主数据库，以确保系统的持续可用性。
+>
+> 以下是Redis中哨兵模式的主要组成部分和工作原理：
+>
+> 1.  哨兵（Sentinel）：哨兵是一个独立的进程，负责监控Redis中的主数据库和从数据库。哨兵会定期向主数据库和从数据库发送PING命令来检测它们的状态，并在发现主数据库不可用时，选举出一个新的主数据库。
+> 2.  主数据库（Master）：主数据库是Redis中的主要数据存储节点，负责处理所有写操作，并将数据同步到从数据库。
+> 3.  从数据库（Slave）：从数据库是主数据库的备份节点，负责接收来自主数据库的数据复制，并在主数据库失效时，通过选举成为新的主数据库。
+>
+> 工作流程如下：
+>
+>  *  初始阶段，哨兵监控着系统中的主数据库和从数据库。
+>  *  如果主数据库失效（比如宕机），哨兵会开始进行故障检测。
+>  *  哨兵会根据预设的条件（例如，主数据库不可用的连续次数）来决定是否宣布主数据库失效。
+>  *  一旦主数据库失效，哨兵会从当前的从数据库中选举出一个新的主数据库。
+>  *  选举出的新主数据库将会向哨兵报告自己的状态，并成为系统中的主数据库。
+>  *  哨兵会更新系统中所有的从数据库，使它们成为新主数据库的从数据库，并开始将数据复制到它们。
+
+> 在Redis Sentinel（哨兵）中，用于选举主节点的算法主要是基于哨兵之间的通信和协作。哨兵通过相互通信来达成一致，选择一个合适的从节点作为新的主节点。主要的选举算法包括：
+>
+> 1.  投票选举算法：
+>
+>  *  在Redis Sentinel中，当哨兵检测到主节点不可用时，它会发起一次选举过程。
+>  *  每个哨兵都会投票给自己认为适合成为新主节点的从节点。
+>  *  哨兵将投票结果进行汇总，并选择得到最多票数的从节点作为新的主节点。
+>  *  如果存在多个从节点获得相同数量的选票，则根据一定的优先级规则进行进一步的决定，例如根据从节点的复制偏移量（复制进度）或者ID等因素进行排序。
+>
+> 1.  加权投票选举算法：
+>
+>  *  类似于投票选举算法，但是不同哨兵的投票可能具有不同的权重，这可以根据哨兵的配置或性能来调整。
+>  *  通过给具有更高权重的哨兵赋予更多的投票权，可以在选举过程中更加重视它们的投票结果。
+>
+> 1.  基于节点健康度的选举算法：
+>
+>  *  在进行选举时，哨兵可能会考虑到每个从节点的健康度。
+>  *  如果一个从节点被认为更健康或者复制进度更接近于主节点，则它可能会获得更多的选票，从而有更大的机会成为新的主节点。
+
+![pic_3dbd63cd.png](redis.assets/pic_3dbd63cd.png)
+
+这里的哨兵有两个作用
+
+ *  通过发送命令，让Redis服务器返回监控其运行状态，包括主服务器和从服务器。
+ *  当哨兵监测到master宕机，会自动将slave切换成master，然后通过发布订阅模式通知其他的从服 务器，修改配置文件，让它们切换主机。
+
+然而一个哨兵进程对Redis服务器进行监控，可能会出现问题，为此，我们可以使用多个哨兵进行监控。 各个哨兵之间还会进行监控，这样就形成了多哨兵模式。
+
+![pic_1ede2b3f.png](redis.assets/pic_1ede2b3f.png)
+
+假设主服务器宕机，哨兵1先检测到这个结果，系统并不会马上进行failover过程，仅仅是哨兵1主观的认 为主服务器不可用，这个现象成为主观下线。当后面的哨兵也检测到主服务器不可用，并且数量达到一 定值时，那么哨兵之间就会进行一次投票，投票的结果由一个哨兵发起，进行failover\[故障转移\]操作。 切换成功后，就会通过发布订阅模式，让各个哨兵把自己监控的从服务器实现切换主机，这个过程称为 客观下线。
+
+> 测试
+
+我们目前的状态是 一主二从！
+
+1、配置哨兵配置文件 sentinel.conf
+
+```bash
+# sentinel monitor 被监控的名称 host port 1
+sentinel monitor myredis 127.0.0.1 6379 1   
+#后面的这个数字1 ，代表主机挂了，从机投票看让谁接替成为主机，票数最多的，就会成为主机。
+```
+
+> 1.  sentinel：这是Redis Sentinel的命令行工具。
+> 2.  monitor：这是sentinel命令的一个子命令，用于指示哨兵开始监视一个Redis实例。
+> 3.  myredis：这是要监视的Redis实例的名称。它是一个用户定义的标识符，用于在监视多个Redis实例时进行区分。
+> 4.  127.0.0.1：这是要监视的Redis实例的主机地址。在这里，使用的是本地主机（localhost）的IP地址。
+> 5.  6379：这是要监视的Redis实例的端口号。在这里，Redis实例使用的是默认的6379端口。
+> 6.  1：这是指定了要求多少个哨兵同意（包括自身）才将一个节点标记为主节点。在这里，使用的是"1"，表示只需要一个哨兵同意即可。
+>
+> 综合起来，该命令告诉Redis Sentinel开始监视一个名为 “myredis” 的Redis实例，该实例位于本地主机的6379端口，如果至少有一个哨兵同意，它将标记一个节点为主节点。
+
+2.启动哨兵
+
+```java
+[root@localhost bin]# redis-sentinel kconfig/sentinel.conf
+```
+
+![pic_417d86df.png](redis.assets/pic_417d86df.png)
+
+如果Master 节点断开了，这个时候就会从从机中随机选择一个服务器！ （这里面有一个投票算法！）
+
+![pic_172c9e5c.png](redis.assets/pic_172c9e5c.png)
+
+哨兵日志！ (指定6381为主节点)
+
+![pic_0c9e3e19.png](redis.assets/pic_0c9e3e19.png)
+
+> 哨兵模式
+
+如果主机此时回来了，只能归并到新的主机下，当做从机，这就是哨兵模式的规则！
+
+> 哨兵模式优缺点
+
+优点：
+
+1.  哨兵集群，基于主从复制模式，所有主从复制的优点，它都有
+2.  主从可以切换，故障可以转移，系统的可用性更好
+3.  哨兵模式是主从模式的升级，手动到自动，更加健壮
+
+缺点：
+
+1.  Redis不好在线扩容，集群容量一旦达到上限，在线扩容就十分麻烦
+2.  实现哨兵模式的配置其实是很麻烦的，里面有很多配置项
+
+> 哨兵模式的全部配置
+
+完整的哨兵模式配置文件 sentinel.conf
+
+```bash
+# Example sentinel.conf
+
+# 哨兵sentinel实例运行的端口 默认26379
+port 26379
+
+# 哨兵sentinel的工作目录
+dir /tmp
+
+# 哨兵sentinel监控的redis主节点的 ip port 
+# master-name  可以自己命名的主节点名字 只能由字母A-z、数字0-9 、这三个字符".-_"组成。
+# quorum 当这些quorum个数sentinel哨兵认为master主节点失联 那么这时 客观上认为主节点失联了
+# sentinel monitor <master-name> <ip> <redis-port> <quorum>
+sentinel monitor mymaster 127.0.0.1 6379 1
+
+# 当在Redis实例中开启了requirepass foobared 授权密码 这样所有连接Redis实例的客户端都要提供密码
+# 设置哨兵sentinel 连接主从的密码 注意必须为主从设置一样的验证密码
+# sentinel auth-pass <master-name> <password>
+sentinel auth-pass mymaster MySUPER--secret-0123passw0rd
+
+
+# 指定多少毫秒之后 主节点没有应答哨兵sentinel 此时 哨兵主观上认为主节点下线 默认30秒
+# sentinel down-after-milliseconds <master-name> <milliseconds>
+sentinel down-after-milliseconds mymaster 30000
+
+# 这个配置项指定了在发生failover主备切换时最多可以有多少个slave同时对新的master进行 同步，
+这个数字越小，完成failover所需的时间就越长，
+但是如果这个数字越大，就意味着越 多的slave因为replication而不可用。
+可以通过将这个值设为 1 来保证每次只有一个slave 处于不能处理命令请求的状态。
+# sentinel parallel-syncs <master-name> <numslaves>
+sentinel parallel-syncs mymaster 1
+
+
+
+# 故障转移的超时时间 failover-timeout 可以用在以下这些方面： 
+#1. 同一个sentinel对同一个master两次failover之间的间隔时间。
+#2. 当一个slave从一个错误的master那里同步数据开始计算时间。直到slave被纠正为向正确的master那里同步数据时。
+#3.当想要取消一个正在进行的failover所需要的时间。  
+#4.当进行failover时，配置所有slaves指向新的master所需的最大时间。不过，即使过了这个超时，slaves依然会被正确配置为指向master，但是就不按parallel-syncs所配置的规则来了
+# 默认三分钟
+# sentinel failover-timeout <master-name> <milliseconds>
+sentinel failover-timeout mymaster 180000
+
+# SCRIPTS EXECUTION
+
+#配置当某一事件发生时所需要执行的脚本，可以通过脚本来通知管理员，例如当系统运行不正常时发邮件通知相关人员。
+#对于脚本的运行结果有以下规则：
+#若脚本执行后返回1，那么该脚本稍后将会被再次执行，重复次数目前默认为10
+#若脚本执行后返回2，或者比2更高的一个返回值，脚本将不会重复执行。
+#如果脚本在执行过程中由于收到系统中断信号被终止了，则同返回值为1时的行为相同。
+#一个脚本的最大执行时间为60s，如果超过这个时间，脚本将会被一个SIGKILL信号终止，之后重新执行。
+
+#通知型脚本:当sentinel有任何警告级别的事件发生时（比如说redis实例的主观失效和客观失效等等），将会去调用这个脚本，
+#这时这个脚本应该通过邮件，SMS等方式去通知系统管理员关于系统不正常运行的信息。调用该脚本时，将传给脚本两个参数，
+#一个是事件的类型，
+#一个是事件的描述。
+#如果sentinel.conf配置文件中配置了这个脚本路径，那么必须保证这个脚本存在于这个路径，并且是可执行的，否则sentinel无法正常启动成功。
+#通知脚本  用shell编写
+# sentinel notification-script <master-name> <script-path>
+  sentinel notification-script mymaster /var/redis/notify.sh
+
+# 客户端重新配置主节点参数脚本
+# 当一个master由于failover而发生改变时，这个脚本将会被调用，通知相关的客户端关于master地址已经发生改变的信息。
+# 以下参数将会在调用脚本时传给脚本:
+# <master-name> <role> <state> <from-ip> <from-port> <to-ip> <to-port>
+# 目前<state>总是“failover”,
+# <role>是“leader”或者“observer”中的一个。 
+# 参数 from-ip, from-port, to-ip, to-port是用来和旧的master和新的master(即旧的slave)通信的
+# 这个脚本应该是通用的，能被多次调用，不是针对性的。
+# sentinel client-reconfig-script <master-name> <script-path>
+sentinel client-reconfig-script mymaster /var/redis/reconfig.sh  #一般都是由运维来配置。
+```
+
+> `sentinel parallel-syncs mymaster 1`:
+>
+> 这条Redis Sentinel配置命令指定了在执行故障转移期间，要将从节点重新配置为新的主节点所需的并行复制过程的最大数量。这里的参数解释如下：
+>
+>  *  sentinel：Redis Sentinel命令前缀。
+>  *  parallel-syncs：这是配置项的名称，用于指定并行同步的数量。
+>  *  mymaster：这是要设置并行同步的Redis主节点的名称。
+>  *  1：这是指定了在执行故障转移期间所允许的最大并行同步数量。
+>
+> 换句话说，当发生故障转移并将一个从节点提升为新的主节点时，这个参数指定了可以同时对多少个从节点执行同步操作。在这种情况下，配置为 `1` 表示在进行故障转移时只允许一个从节点与新的主节点进行并行同步。这可以避免对主节点的负载过大，因为在同步期间会消耗大量的网络带宽和主节点的处理能力。
+>
+> 如果需要更高的可用性，可以增加并行同步的数量，但要注意确保主节点的资源足够支持这些并行同步操作，以免影响主节点的性能。
+
+# 十三、Redis缓存穿透和雪崩 
+
+> 缓存就是一堵墙
+>
+>  *  穿透就是越过墙（查不到），
+>  *  击穿就是墙破了个洞（热点过期，点），
+>  *  雪崩就是墙倒了（缓存集中过期 / Redis宕机，面）
+
+> 服务的高可用问题！
+
+Redis缓存的使用，极大的提升了应用程序的性能和效率，特别是数据查询方面。但同时，它也带来了一 些问题。其中，最要害的问题，就是数据的一致性问题，从严格意义上讲，这个问题无解。如果对数据 的一致性要求很高，那么就不能使用缓存。
+
+另外的一些典型问题就是，缓存穿透、缓存雪崩和缓存击穿。目前，业界也都有比较流行的解决方案。
+
+#### 缓存穿透
+
+> 概念（查不到） 
+
+缓存穿透的概念很简单，用户想要查询一个数据，发现redis内存数据库没有，也就是缓存没有命中，于是向持久层数据库查询。发现也没有，于是本次查询失败。当用户很多的时候，缓存都没有命中（秒杀！），于是都去请求了持久层数据库。这会给持久层数据库造成很大的压力，这时候就相当于出现了 缓存穿透。
+
+![pic_8d51dd50.png](redis.assets/pic_8d51dd50.png)
+
+> 解决方案
+
+布隆过滤器
+
+布隆过滤器是一种数据结构，对所有可能查询的参数以hash形式存储，在控制层先进行校验，不符合则 丢弃，从而避免了对底层存储系统的查询压力；
+
+![pic_ff90ad65.png](redis.assets/pic_ff90ad65.png)
+
+缓存空对象
+
+当存储层不命中后，即使返回的空对象也将其缓存起来，同时会设置一个过期时间，之后再访问这个数 据将会从缓存中获取，保护了后端数据源；
+
+![pic_c369044e.png](redis.assets/pic_c369044e.png)
+
+但是这种方法会存在两个问题：
+
+1、如果空值能够被缓存起来，这就意味着缓存需要更多的空间存储更多的键，因为这当中可能会有很多 的空值的键；
+
+2、即使对空值设置了过期时间，还是会存在缓存层和存储层的数据会有一段时间窗口的不一致，这对于 需要保持一致性的业务会有影响。
+
+#### 缓存击穿
+
+> 概述（量太大，缓存过期！） 
+
+这里需要注意和缓存击穿的区别，缓存击穿，是指一个key非常热点，在不停的扛着大并发，大并发集中 对这一个点进行访问，当这个key在失效的瞬间，持续的大并发就穿破缓存，直接请求数据库，就像在一 个屏障上凿开了一个洞。
+
+当某个key在过期的瞬间，有大量的请求并发访问，这类数据一般是热点数据，由于缓存过期，会同时访 问数据库来查询最新数据，并且回写缓存，会导使数据库瞬间压力过大。
+
+> 解决方案
+
+设置热点数据永不过期
+
+从缓存层面来看，没有设置过期时间，所以不会出现热点 key 过期后产生的问题。
+
+加互斥锁 (分布式锁)
+
+分布式锁：使用分布式锁，保证对于每个key同时只有一个线程去查询后端服务，其他线程没有获得分布 式锁的权限，因此只需要等待即可。这种方式将高并发的压力转移到了分布式锁，因此对分布式锁的考验很大。
+
+![pic_f3e33b1c.png](redis.assets/pic_f3e33b1c.png)
+
+#### 缓存雪崩 
+
+> 概念
+
+缓存雪崩，是指在某一个时间段，缓存集中过期失效。Redis 宕机！
+
+产生雪崩的原因之一，比如在写本文的时候，马上就要到双十二零点，很快就会迎来一波抢购，这波商 品时间比较集中的放入了缓存，假设缓存一个小时。那么到了凌晨一点钟的时候，这批商品的缓存就都 过期了。而对这批商品的访问查询，都落到了数据库上，对于数据库而言，就会产生周期性的压力波 峰。于是所有的请求都会达到存储层，存储层的调用量会暴增，造成存储层也会挂掉的情况。
+
+![pic_02fe32c2.png](redis.assets/pic_02fe32c2.png)
+
+其实集中过期，倒不是非常致命，比较致命的缓存雪崩，是缓存服务器某个节点宕机或断网。因为自然 形成的缓存雪崩，一定是在某个时间段集中创建缓存，这个时候，数据库也是可以顶住压力的。无非就 是对数据库产生周期性的压力而已。而缓存服务节点的宕机，对数据库服务器造成的压力是不可预知 的，很有可能瞬间就把数据库压垮。
+
+> 解决方案
+
+redis高可用
+
+这个思想的含义是，既然redis有可能挂掉，那我多增设几台redis，这样一台挂掉之后其他的还可以继续 工作，其实就是搭建的集群。（异地多活！）
+
+限流降级（在SpringCloud讲解过！）
+
+这个解决方案的思想是，在缓存失效后，通过加锁或者队列来控制读数据库写缓存的线程数量。比如对 某个key只允许一个线程查询数据和写缓存，其他线程等待。
+
+数据预热
+
+数据加热的含义就是在正式部署之前，我先把可能的数据先预先访问一遍，这样部分可能大量访问的数 据就会加载到缓存中。在即将发生大并发访问前手动触发加载缓存不同的key，设置不同的过期时间，让 缓存失效的时间点尽量均匀。
+
+# 十四、布隆过滤器 
+
+## 1. 什么是布隆过滤器 
+
+布隆过滤器（Bloom Filter），是1970年，由一个叫布隆的小伙子提出的，距今已经五十年了，和老哥一样老。
+
+它实际上是一个很长的二进制向量和一系列随机映射函数，二进制大家应该都清楚，存储的数据不是0就是1，默认是0。
+
+主要用于判断一个元素是否在一个集合中，0代表`不存在`某个数据，1代表`存在`某个数据。
+
+懂了吗？作为`暖男`的老哥在给你们画张图来帮助理解：
+
+![pic_502f5758.png](redis.assets/pic_502f5758.png)
+
+## 2. 布隆过滤器用途 
+
+ *  解决Redis缓存穿透（今天重点讲解）
+ *  在爬虫时，对爬虫网址进行过滤，已经存在布隆中的网址，不在爬取。
+ *  垃圾邮件过滤，对每一个发送邮件的地址进行判断是否在布隆的黑名单中，如果在就判断为垃圾邮件。
+
+## 3. 布隆过滤器原理 
+
+##### 存入过程 
+
+布隆过滤器上面说了，就是一个二进制数据的集合。当一个数据加入这个集合时，经历如下洗礼（这里有缺点，下面会讲）：
+
+ *  通过K个哈希函数计算该数据，返回K个计算出的hash值
+ *  这些K个hash值映射到对应的K个二进制的数组下标
+ *  将K个下标对应的二进制数据改成1。
+
+例如，第一个哈希函数返回x，第二个第三个哈希函数返回y与z，那么：X、Y、Z对应的二进制改成1。
+
+![pic_8f5e6632.png](redis.assets/pic_8f5e6632.png)
+
+##### 查询过程 
+
+布隆过滤器主要作用就是查询一个数据，在不在这个二进制的集合中，查询过程如下
+
+ *  通过K个哈希函数计算该数据，对应计算出的K个hash值
+ *  通过hash值找到对应的二进制的数组下标
+ *  判断：如果存在一处位置的二进制数据是0，那么该数据不存在。如果都是1，该数据存在集合中。（这里有缺点，下面会讲）
+
+##### 删除过程 
+
+一般不能删除布隆过滤器里的数据，这是一个缺点之一，我们下面会分析
+
+##### 布隆过滤器的优缺点 
+
+> 优点
+
+ *  由于存储的是二进制数据，所以占用的空间很小
+ *  它的插入和查询速度是非常快的，时间复杂度是O（K），可以联想一下HashMap的过程
+ *  保密性很好，因为本身不存储任何原始数据，只有二进制数据
+
+> 缺点
+
+这就要回到我们上面所说的那些缺点了。
+
+添加数据是通过计算数据的hash值，那么很有可能存在这种情况：两个不同的数据计算得到相同的hash值。
+
+![pic_d01c3798.png](redis.assets/pic_d01c3798.png)
+
+例如图中的“`你好`”和“`hello`”，假如最终算出hash值相同，那么他们会将同一个下标的二进制数据改为1。
+
+这个时候，你就不知道下标为2的二进制，到底是代表“`你好`”还是“`hello`”。
+
+由此得出如下缺点
+
+###### 一、存在误判 
+
+假如上面的图没有存"`hello`"，只存了"`你好`"，那么用"`hello`"来查询的时候，会判断"`hello`"存在集合中。
+
+因为“`你好`”和“`hello`”的hash值是相同的，通过相同的hash值，找到的二进制数据也是一样的，都是1。
+
+###### 二、删除困难 
+
+到这里我不说大家应该也明白为什么吧，作为你们的`暖男老哥`，还是讲一下吧。
+
+还是用上面的举例，因为“`你好`”和“`hello`”的hash值相同，对应的数组下标也是一样的。
+
+这时候老哥想去删除“`你好`”，将下标为2里的二进制数据，由1改成了0。
+
+那么我们是不是连“`hello`”都一起删了呀。（0代表有这个数据，1代表没有这个数据）
+
+## 4. 实现布隆过滤器 
+
+有很多种实现方式，其中一种就是`Guava`提供的实现方式。
+
+###### 一、引入Guava pom配置 
+
+```java
+<dependency>
+  <groupId>com.google.guava</groupId>
+  <artifactId>guava</artifactId>
+  <version>29.0-jre</version>
+</dependency>
+```
+
+###### 二、代码实现 
+
+这里我们顺便测一下它的误判率。
+
+```java
+package com.fatfish.bloomfilter;
+
+import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnels;
+
+public class MyBloomFilter {
+   
+     
+     
+    private static int size = 1000000;
+    private static double fpp = 0.01;
+
+    private static BloomFilter<Integer> bloomFilter = BloomFilter.create(Funnels.integerFunnel(), size, fpp);
+
+    public static void main(String[] args) {
+   
+     
+     
+        for (int i = 0; i < size; i++) {
+   
+     
+     
+            bloomFilter.put(i);
+        }
+
+        int count = 0;
+        for (int i = size; i < size + 1000000; i++) {
+   
+     
+     
+            if (bloomFilter.mightContain(i)) {
+   
+     
+     
+                count++;
+                System.out.println(i + "误判了");
+            }
+        }
+        System.out.println("总共的误判数目：" + count);
+        System.out.printf("误判率：%.3f", 1.0*count/size);
+    }
+}
+```
+
+运行结果：
+
+10万数据里有947个误判，约等于0.01%，也就是我们代码里设置的误判率：fpp = 0.01。
+
+##### 深入分析代码 
+
+核心`BloomFilter.create`方法
+
+```java
+@VisibleForTesting
+  static <T> BloomFilter<T> create(      Funnel<? super T> funnel, long expectedInsertions, double fpp, Strategy strategy) {
+   
+     
+     
+    。。。。
+}
+```
+
+这里有四个参数：
+
+ *  `funnel`：数据类型(一般是调用Funnels工具类中的)
+ *  `expectedInsertions`：期望插入的值的个数
+ *  `fpp`：误判率(默认值为0.03)
+ *  `strategy`：哈希算法
+
+我们重点讲一下`fpp`参数
+
+##### fpp误判率（False Positive Probability，假阳性概率） 
+
+###### 情景一：`fpp = 0.01` 
+
+ *  误判个数：947
+ *  占内存大小：9585058位数
+
+###### 情景二：`fpp = 0.03`（默认参数） 
+
+ *  误判个数：3033
+ *  占内存大小：7298440位数
+
+###### 情景总结 
+
+ *  误判率可以通过`fpp`参数进行调节
+ *  fpp越小，需要的内存空间就越大：0.01需要900多万位数，0.03需要700多万位数。
+ *  fpp越小，集合添加数据时，就需要更多的hash函数运算更多的hash值，去存储到对应的数组下标里。（忘了去看上面的布隆过滤存入数据的过程）
+
+上面的`numBits`，表示存一百万个int类型数字，需要的位数为7298440，700多万位。理论上存一百万个数，一个int是4字节32位，需要481000000=3200万位。如果使用HashMap去存，按HashMap50%的存储效率，需要6400万位。可以看出BloomFilter的存储空间很小，只有HashMap的1/10左右
+
+上面的`numHashFunctions`表示需要几个hash函数运算，去映射不同的下标存这些数字是否存在（0 or 1）。
+
+##### 解决Redis缓存穿透 
+
+上面使用Guava实现的布隆过滤器是把数据放在了本地内存中。分布式的场景中就不合适了，无法共享内存。
+
+我们还可以用Redis来实现布隆过滤器，这里使用Redis封装好的客户端工具Redisson。
+
+其底层是使用数据结构bitMap，大家就把它理解成上面说的二进制结构，由于篇幅原因，bitmap不在这篇文章里讲，我们之后写一篇文章介绍。
+
+###### 代码实现 
+
+pom配置：
+
+```java
+<dependency>
+  <groupId>org.redisson</groupId>
+  <artifactId>redisson-spring-boot-starter</artifactId>
+  <version>3.13.4</version>
+</dependency>
+```
+
+java代码：
+
+```java
+public class RedissonBloomFilter {
+   
+     
+     
+
+  public static void main(String[] args) {
+   
+     
+     
+    Config config = new Config();
+    config.useSingleServer().setAddress("redis://127.0.0.1:6379");
+    config.useSingleServer().setPassword("1234");
+    //构造Redisson
+    RedissonClient redisson = Redisson.create(config);
+
+    RBloomFilter<String> bloomFilter = redisson.getBloomFilter("phoneList");
+    //初始化布隆过滤器：预计元素为100000000L,误差率为3%
+    bloomFilter.tryInit(100000000L,0.03);
+    //将号码10086插入到布隆过滤器中
+    bloomFilter.add("10086");
+
+    //判断下面号码是否在布隆过滤器中
+    //输出false
+    System.out.println(bloomFilter.contains("123456"));
+    //输出true
+    System.out.println(bloomFilter.contains("10086"));
+  }
+}
+```
+
+由于Guava那个版本，我们已经很详细的讲了布隆过滤器的那些参数，这里就不重复赘述了。
+
+> 1.  Jedis：
+>
+>  *  Jedis是Redis官方推荐的Java客户端之一，它是一个直接连接Redis服务器的Java库，提供了简单易用的API，使用起来较为直观。
+>  *  Jedis通过创建连接池来管理与Redis服务器的连接，通过连接池可以减少连接创建和销毁的开销，提高性能。
+>  *  Jedis的优点是简单易用，适合于对Redis操作较为简单的场景。
+>
+> 1.  RedisTemplate：
+>
+>  *  RedisTemplate是Spring Data Redis提供的一个Redis操作模板，它封装了Redis连接和操作的细节，提供了更高层次的抽象和功能。
+>  *  RedisTemplate提供了一种更加灵活和功能丰富的方式来操作Redis，支持多种数据结构和命令，同时与Spring框架集成更为紧密。
+>  *  RedisTemplate是基于Jedis或Lettuce等底层连接池实现的，可以灵活切换底层连接方式。
+>
+> 1.  Redis连接池：
+>
+>  *  Redis连接池用于管理与Redis服务器的连接，它可以提高连接的复用率和效率，减少连接创建和销毁的开销。
+>  *  连接池可以通过预先创建一定数量的连接并维护在一个连接池中，客户端需要时从连接池中获取连接并在使用完毕后归还，以实现连接的复用和管理。
+>
+> 1.  Lettuce：
+>
+>  *  Lettuce是一个基于Netty实现的高性能Redis客户端，相比于Jedis，它支持异步操作和响应式编程模型，具有更好的并发性能和可扩展性。
+>  *  Lettuce提供了更加灵活和强大的API，支持连接池、集群、哨兵、SSL等特性，同时提供了更丰富的配置选项和监控功能。
+>
+> 1.  Redisson：
+>
+>  *  Redisson是一个基于Redis的Java驻内存数据网格（In-Memory Data Grid）和分布式锁（Distributed Lock）的框架，它提供了丰富的分布式数据结构和分布式服务。
+>  *  Redisson不仅提供了对Redis的普通操作，还提供了诸如分布式集合、分布式映射、分布式锁等高级功能，可以简化分布式系统的开发和管理。
+>  *  Redisson是一个完整的Redis客户端，它使用了Lettuce作为底层的Redis连接实现，同时提供了更高级别的功能和抽象。
+>
+> 总的来说，Jedis和Lettuce是直接连接Redis服务器的客户端，RedisTemplate是Spring Data Redis提供的操作模板，Redisson是一个完整的Redis客户端框架，而Redis连接池则用于管理客户端与Redis服务器之间的连接。它们之间的选择取决于项目的需求和开发者的偏好，可以根据具体场景选择最适合的客户端。
+>
+> ```java
+> package com.fatfish.bloomfilter;
+> 
+> import com.fatfish.config.RedisConfig;
+> import com.fatfish.utils.JedisEnumSingleton;
+> import com.fatfish.utils.RedisUtil;
+> import com.google.common.base.Charsets;
+> import com.google.common.hash.BloomFilter;
+> import com.google.common.hash.Funnels;
+> import org.redisson.Redisson;
+> import org.redisson.api.RedissonClient;
+> import org.redisson.config.Config;
+> import org.springframework.beans.factory.annotation.Autowired;
+> import org.springframework.beans.factory.annotation.Qualifier;
+> import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+> import org.springframework.data.redis.connection.RedisConnection;
+> import org.springframework.data.redis.core.RedisTemplate;
+> import org.springframework.stereotype.Component;
+> import redis.clients.jedis.Jedis;
+> import redis.clients.jedis.JedisPool;
+> import redis.clients.jedis.JedisPoolConfig;
+> 
+> import javax.annotation.Resource;
+> import java.util.HashMap;
+> import java.util.Map;
+> 
+> @Component
+> public class RedisBloomFilter {
+> 
+> 
+> 
+>     // 布隆过滤器零一串大小
+>     private static final long EXPECTED_INSERTIONS = 1000000;
+>     // 预设的误判率，假阳性概率
+>     private static final double FALSE_POSITIVE_PROBABILITY = 0.03;
+>     // 主机号
+>     private static final String HOST = "127.0.0.1";
+>     // 端口号
+>     private static final int PORT = 6379;
+>     // 布隆过滤器
+>     private static BloomFilter<CharSequence> bloomFilter;
+>     // Jedis
+>     private static Jedis jedis;
+>     // Jedis Pool
+>     private static JedisPool jedisPool;
+>     // RedisTemplate —— 封装在 RedisUtil 中
+>     private static RedisUtil redisUtil;
+>     // redisson
+>     private static RedissonClient redissonClient;
+>     // 内存
+>     private static Map<String, String> memory;
+> 
+>     static {
+> 
+> 
+> 
+>         // 初始化内存
+>         memory = new HashMap<>();
+>         memory.put("张三", "北京市");
+>         memory.put("李四", "上海市");
+>         memory.put("王五", "广州市");
+> 
+>         // 初始化布隆过滤器
+>         bloomFilter = BloomFilter.create(Funnels.stringFunnel(Charsets.UTF_8), 1, 0.01);
+> 
+> 
+>         // 初始化 Jedis Pool
+>         jedisPool = new JedisPool(new JedisPoolConfig(), HOST, PORT);
+> 
+>         // redisUtil 初始化
+>         redisUtil = new RedisUtil();
+> 
+>         // redissonClient 初始化
+>         Config config = new Config();
+>         config.useSingleServer().setAddress("redis://" + HOST + ":" + PORT);
+>         redissonClient = Redisson.create(config);
+> 
+> //        bloomFilter = redissonClient.getBloomFilter("myBloomFilter");
+> 
+>         // 初始化 Jedis
+>         // 方式 1 ：Jedis直连
+>         jedis = JedisEnumSingleton.INSTANCE.getJedis();
+>         // 方式 2 ：Jedis pool
+>         jedis = jedisPool.getResource();
+>         // 方式 3 ：RedisTemplate —— 基于Jedis或Lettuce等底层连接池实现
+>         // 方式 4 ：Redisson
+>     }
+> 
+>     public static void main(String[] args) {
+> 
+> 
+> 
+>         // 加载数据库中的相关数据到布隆过滤器
+>         loadDataFromDB2BloomFilter();
+> 
+>         // 查布隆过滤器，判断数据是否存在（Redis 或 内存）
+>         // 若数据不存在，则返回
+>         // 若数据存在，则继续；
+>         String[] querys = new String[]{
+> 
+> 
+>       "张三", "李四", "张三", "王五", "赵六"};
+>         for (String query : querys) {
+> 
+> 
+> 
+>             System.out.println("=================================");
+>             System.out.println("开始查询" + query);
+>             boolean mightContain = bloomFilter.mightContain(query);
+>             // 数据不存在，则返回
+>             if (!mightContain) {
+> 
+> 
+> 
+>                 System.out.println(query + "不存在，请检查后再操作！");
+>                 return;
+>             }
+>             // 数据存在，则继续
+>             else {
+> 
+> 
+> 
+>                 // 查Redis 缓存
+> //                queryRedisByJedis(query);
+> //                queryRedisByRedisTemplate(query);
+>                 queryRedisByRedisson(query);
+>             }
+>         }
+>         if (redissonClient != null && !redissonClient.isShutdown()) {
+> 
+> 
+> 
+>             redissonClient.shutdown();
+>         }
+>     }
+>     /**
+>      * 查Redis 缓存
+>      * Redis 缓存存在，则直接返回
+>      * Redis 缓存不存在，则查内存，并将结果也写到Redis 缓存中
+>      *
+>      * @param query 待查询的 key
+>      */
+>     private static void queryRedisByRedisson(String query) {
+> 
+> 
+> 
+>         boolean exists = redissonClient.getBucket(query).isExists();
+>         // Redis 缓存存在，则直接返回
+>         if (exists) {
+> 
+> 
+> 
+>             String result = redissonClient.getBucket(query).get().toString();
+>             System.out.println("结果存在于Redis缓存, 查询结果：" + result);
+>         }
+>         // Redis 缓存不存在，则查内存，并将结果也写到Redis 缓存中
+>         else {
+> 
+> 
+> 
+>             // 查内存
+>             if (memory.containsKey(query)) {
+> 
+> 
+> 
+>                 String result = memory.get(query);
+>                 // 将结果也写到Redis 缓存中
+>                 redissonClient.getBucket(query).set(result);
+>                 System.out.println("结果存在于DB, 查询结果：" + result);
+>             }
+>         }
+>     }
+> 
+>     /**
+>      * 查Redis 缓存
+>      * Redis 缓存存在，则直接返回
+>      * Redis 缓存不存在，则查内存，并将结果也写到Redis 缓存中
+>      *
+>      * @param query 待查询的 key
+>      */
+>     private static void queryRedisByRedisTemplate(String query) {
+> 
+> 
+> 
+>         boolean exists = redisUtil.hasKey(query);
+>         // Redis 缓存存在，则直接返回
+>         if (exists) {
+> 
+> 
+> 
+>             String result = (String) redisUtil.get(query);
+>             System.out.println("结果存在于Redis缓存, 查询结果：" + result);
+>         }
+>         // Redis 缓存不存在，则查内存，并将结果也写到Redis 缓存中
+>         else {
+> 
+> 
+> 
+>             // 查内存
+>             if (memory.containsKey(query)) {
+> 
+> 
+> 
+>                 String result = memory.get(query);
+>                 // 将结果也写到Redis 缓存中
+>                 redisUtil.set(query, result);
+>                 System.out.println("结果存在于DB, 查询结果：" + result);
+>             }
+>         }
+>     }
+> 
+>     /**
+>      * 查Redis 缓存
+>      * Redis 缓存存在，则直接返回
+>      * Redis 缓存不存在，则查内存，并将结果也写到Redis 缓存中
+>      *
+>      * @param query 待查询的 key
+>      */
+>     private static void queryRedisByJedis(String query) {
+> 
+> 
+> 
+>         Boolean exists = jedis.exists(query);
+>         // Redis 缓存存在，则直接返回
+>         if (exists) {
+> 
+> 
+> 
+>             String result = jedis.get(query);
+>             System.out.println("结果存在于Redis缓存, 查询结果：" + result);
+>         }
+>         // Redis 缓存不存在，则查内存，并将结果也写到Redis 缓存中
+>         else {
+> 
+> 
+> 
+>             // 查内存
+>             if (memory.containsKey(query)) {
+> 
+> 
+> 
+>                 String result = memory.get(query);
+>                 // 将结果也写到Redis 缓存中
+>                 jedis.set(query, result);
+>                 System.out.println("结果存在于DB, 查询结果：" + result);
+>             }
+>         }
+>     }
+> 
+>     /**
+>      * 加载数据库中的相关数据到布隆过滤器
+>      */
+>     private static void loadDataFromDB2BloomFilter() {
+> 
+> 
+> 
+>         System.out.println("开始加载数据库中的相关数据到布隆过滤器...");
+>         for (Map.Entry<String, String> cache : memory.entrySet()) {
+> 
+> 
+> 
+>             String name = cache.getKey();
+>             bloomFilter.put(name);
+>         }
+>         System.out.println("数据加载完成！");
+>     }
+> }
+> ```
+
+# 十五、Redisson 
+
+[【进阶篇】Redis实战之Redisson使用技巧详解，干活！-腾讯云开发者社区-腾讯云][Redis_Redisson_-_-]
+
+[Redis分布式锁-这一篇全了解(Redission实现分布式锁完美方案)-CSDN博客][Redis_-_Redission_-CSDN]
+
+## 参考 
+
+[【狂神说Java】Redis最新超详细版教程通俗易懂][Java_Redis]
+
+[Redis笔记总结(狂神说) - 爲誰心殇 - 博客园][Redis_ - _ -]
+
+[狂神说 Redis笔记\_狂神说redis笔记-CSDN博客][Redis_redis_-CSDN]
