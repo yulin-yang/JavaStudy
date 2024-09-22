@@ -471,18 +471,20 @@ MySQL的InnoDB引擎采用的是B+树的数据结构来存储索引
 
 ![pic_e7f2ab9f.png](https://mark.cuckooing.cn/pics/pic_e7f2ab9f.png)
 
-### 事务 
+## 事务 
 
-#### 事务的特性 (`ACID`) 
+### 事务的特性 (`ACID`) 
 
-事务是一组操作的集合, 它是一个不可分割的工作单位, 事务会把所有的操作作为一个整体一起向系统提交或撤销操作请求, 即这些操作要么同时成功, 要么同时失败.
+事务是一组操作的集合, 它是一个不可分割的工作单位, 事务会把所有的操作作为一个整体一起向系统提交或撤销操作请求
+
+即这些操作要么**同时成功**, **要么同时失败**.
 
 ##### ACID是什么? 
 
  *  原子性(`A`tomicity): 事务是不可分割的最小操作单元, 要么全部成功, 要么全部失败
  *  一致性(`C`onsistency): 事务完成时, 必须使所有的数据都保持一致状态
  *  隔离性(`I`solation): 数据库系统提供的隔离机制, 保证事务在不受外部并发操作影响的独立环境下运行
- *  持久性(`D`urability): 事务一旦提交或回滚, 它对数据库中的数据的改变就是永久的.
+ *  持久性(`D`urability): 事务一旦提交或回滚, 它对数据库中的数据的改变就是永久的（保存在磁盘）
 
 ##### 面试官: 事物的特性是什么? 可以详细说一下吗? 
 
@@ -514,6 +516,15 @@ MySQL的InnoDB引擎采用的是B+树的数据结构来存储索引
   </tr> 
  </tbody> 
 </table>
+> 事务A需要先查询id=1的数据然后进行修改，在修改后还未提交，此时事务B读取了到了id为1修改后的数据，但假如此刻事务A回滚了，那B读到的就是脏数据
+>
+> 例如：
+>
+> - **事务 A** 修改账户余额，将 `账户余额 = 500` 修改为 `账户余额 = 100`，但**尚未提交**。
+>
+> - **事务 B** 读取这个尚未提交的账户余额，看到的是 `100`（事务 A 修改过的数据）。
+>
+> - 如果此时 **事务 A** 由于某种原因**回滚**，数据库恢复到事务 A 执行前的状态，余额依旧是 `500`，但 **事务 B** 已经读取到了 `100` 这个错误的数值。
 
 ![pic_7dda06de.png](https://mark.cuckooing.cn/pics/pic_7dda06de.png)
 
@@ -592,6 +603,7 @@ MySQL的InnoDB引擎采用的是B+树的数据结构来存储索引
  </tbody> 
 </table>
 
+
 注意:事务隔离级别越高, 数据越安全, 但是性能越低
 
 ##### 面试官: 并发事务带来哪些问题? 怎么解决这些问题呢? MySQL的默认隔离级别是? 
@@ -638,17 +650,17 @@ MySQL的InnoDB引擎采用的是B+树的数据结构来存储索引
  *  `undo log`: 记录的是逻辑日志, 当事务回滚时, 通过逆操作恢复原来的数据
  *  `redo log`: 保证了事务的持久性, `undo log`保证了事务的原子性和一致性
 
-#### `MVCC` 
+#### MVCC 
 
 ##### 事务的隔离性如何保证? 
 
-锁: 排他锁(如一个事务获取了一个数据行的排他锁, 其他事物就不能再获取该行的其他锁)
+`锁` ：排他锁(如一个事务获取了一个数据行的排他锁, 其他事物就不能再获取该行的其他锁)
 
 `MVCC`: 多版本并发控制
 
 ##### 解释一下MVCC 
 
-全称`M`ulti-`V`ersion `C`oncurrency `C`ontrol, 多版本并发控制. 指维护一个数据的多个版本, 使得读写操作没有冲突
+全称Multi-Version Concurrency Control， 多版本并发控制，指维护一个数据的多个版本, 使得读写操作没有冲突
 
 MVCC的具体实现, 主要依赖于数据库记录中的隐式字段、`undo log`日志、`readView`.
 
@@ -658,7 +670,13 @@ MVCC的具体实现, 主要依赖于数据库记录中的隐式字段、`undo lo
 
 ###### 记录中的隐藏字段 
 
+除了我们自定义的字段，在mysql中还提供了几个隐藏字段
+
+
+
 ![pic_4d40b425.png](https://mark.cuckooing.cn/pics/pic_4d40b425.png)
+
+
 
 ![pic_4f80037e.png](mysql.assets/pic_4f80037e.png)
 
@@ -672,7 +690,7 @@ MVCC的具体实现, 主要依赖于数据库记录中的隐式字段、`undo lo
  <tbody> 
   <tr> 
    <td>DB_TRX_ID</td> 
-   <td>最近修改事务ID，记录插入这条记录或最后一次修改该记录的事务ID。</td> 
+   <td>最近修改事务ID，记录插入这条记录或最后一次修改该记录的事务ID。自增</td> 
   </tr> 
   <tr> 
    <td>DB_ROLL_PTR</td> 
@@ -685,9 +703,10 @@ MVCC的具体实现, 主要依赖于数据库记录中的隐式字段、`undo lo
  </tbody> 
 </table>
 
+
 举例: 插入了某一条数据, 此时这条数据会自动初始化一个`DB_TRX_ID`, 例如为0, 当修改这条记录之后, `DB_TRX_ID`会进行自增变为1, 再次修改后, 会再次自增为2, 此时`DB_ROLL_PTR`将是1, 指向这条记录的上一个版本
 
-###### `undo log` 
+###### undo log 
 
 回滚日志, 在`insert`、`update`、`delete`的时候产生的便于数据回滚的日志.
 
@@ -695,7 +714,7 @@ MVCC的具体实现, 主要依赖于数据库记录中的隐式字段、`undo lo
 
 而`update`、`delete`的时候, 产生的`undo log`日志不仅在回滚时需要, MVCC版本访问也需要, 不会立即被删除
 
-###### `undo log`版本链 
+###### undo log版本链 
 
 ![pic_d595e84e.png](mysql.assets/pic_d595e84e.png)
 
@@ -715,7 +734,7 @@ MVCC的具体实现, 主要依赖于数据库记录中的隐式字段、`undo lo
 
 不同事务或相同事务对同一条记录进行修改, 会导致该记录的`undo log`生成一条记录版本链表, 链表的头部是最新的旧记录, 链表的尾部是最早的旧记录.
 
-###### `readView` 
+###### readView 
 
 ReadView(读视图)是快照读SQL执行时MVCC提取数据的依据, 记录并维护系统当前活跃的事务(未提交的)ID.
 
@@ -780,8 +799,6 @@ ReadView(读视图)是快照读SQL执行时MVCC提取数据的依据, 记录并�
     
     ![pic_0e742831.png](https://mark.cuckooing.cn/pics/pic_0e742831.png)
     
-    ![pic_be80d713.png](https://mark.cuckooing.cn/pics/pic_be80d713.png)
-    
     结合`undo log`版本链进行比对
     
     ![pic_42690018.png](https://mark.cuckooing.cn/pics/pic_42690018.png)
@@ -792,8 +809,6 @@ ReadView(读视图)是快照读SQL执行时MVCC提取数据的依据, 记录并�
     
     ![pic_fd2d268e.png](https://mark.cuckooing.cn/pics/pic_fd2d268e.png)
     
-    ![pic_0915110b.png](https://mark.cuckooing.cn/pics/pic_0915110b.png)
-    
     结合`undo log`版本链进行比对:
     
     ![pic_1c7cc3bc.png](https://mark.cuckooing.cn/pics/pic_1c7cc3bc.png)
@@ -801,8 +816,6 @@ ReadView(读视图)是快照读SQL执行时MVCC提取数据的依据, 记录并�
     得出结论, 当前读视图可以访问的版本是事务3提交之后的数据, 最后拿到的结果就是:![pic_b40cd79c.png](https://mark.cuckooing.cn/pics/pic_b40cd79c.png)
  *  `REPEATABLE READ`: 仅在事务中第一次执行快照读时生成ReadView, 后续复用该ReadView.
    
-    ![pic_ac9242f4.png](https://mark.cuckooing.cn/pics/pic_ac9242f4.png)
-    
     事务5两次查询的读视图:
     
     ![pic_332d702d.png](https://mark.cuckooing.cn/pics/pic_332d702d.png)
@@ -812,8 +825,6 @@ ReadView(读视图)是快照读SQL执行时MVCC提取数据的依据, 记录并�
     得出结论, 这两次读视图可以访问的版本都是事务2提交之后的数据, 最后拿到的结果就是:![pic_3ed46767.png](https://mark.cuckooing.cn/pics/pic_3ed46767.png)
 
 ##### 面试官: 事务中的隔离性是如何保证的呢? (你解释一下MVCC) 
-
-答:
 
 MVCC是MySQL中的多版本并发控制. 指维护一个数据的多个版本, 使得读写操作没有冲突
 
@@ -826,9 +837,8 @@ MVCC是MySQL中的多版本并发控制. 指维护一个数据的多个版本, �
    
     1.  回滚日志: 存储老版本数据
     2.  版本链: 多个事务并行操作某一行记录, 记录不同事务修改数据的版本, 通过`roll_pointer`指针形成一个链表
- *  ReadView解决的是一个事务查询选择版本的问题
-   
-     *  根据ReadView的匹配规则和当前的一些事务id判断该访问哪个版本的数据
+ *  `ReadView`解决的是一个事务查询选择版本的问题
+   *  根据ReadView的匹配规则和当前的一些事务id判断该访问哪个版本的数据
      *  不同的隔离级别快照读时不一样的, 最终的访问结果都不一样
        
          *  RC: 每一次执行快照读时生成ReadView
