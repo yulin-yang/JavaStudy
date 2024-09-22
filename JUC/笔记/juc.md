@@ -1172,7 +1172,7 @@ class You implements Runnable{
 
 ## 四、线程同步 
 
-### 🍒1.介绍 
+### 1.介绍 
 
 **多个线程操作同一个资源 **
 
@@ -1181,21 +1181,20 @@ class You implements Runnable{
 ![pic_5aefd28f.png](juc.assets/pic_5aefd28f.png)  
 ![pic_d5d6ebc5.png](juc.assets/pic_d5d6ebc5.png)
 
-### 🍒2.不安全的线程案例 
+### 2.不安全的线程案例 
 
 ```java
 //不安全买票
-public class Demo24_UnsafeBuyTicket {
+public class UnsafeBuyTicket {
 
     public static void main(String[] args) {
 
         BuyTicket buyTicket = new BuyTicket();
-        new Thread(buyTicket， "张三").start();
-        new Thread(buyTicket， "李四").start();
-        new Thread(buyTicket， "王五").start();
+        new Thread(buyTicket, "张三").start();
+        new Thread(buyTicket, "李四").start();
+        new Thread(buyTicket, "王五").start();
     }
 }
-
 class BuyTicket implements Runnable {
 
     //票
@@ -1234,6 +1233,10 @@ class BuyTicket implements Runnable {
     }
 }
 ```
+
+这种情况下会出现下面的问题：
+
+![image-20240922132830206](juc.assets/image-20240922132830206.png)
 
 ```java
 /**
@@ -1347,58 +1350,83 @@ public class Demo26_UnsafeList {
 }
 ```
 
-### 🍒3.同步方法 
+### 3.同步方法 
 
 ![pic_48ff7e9c.png](juc.assets/pic_48ff7e9c.png)  
 ![pic_5474934e.png](juc.assets/pic_5474934e.png)  
 同步方法，锁的是this
+
+
+
+`synchronized` 是 Java 中的关键字，用于实现线程同步，防止多个线程同时访问共享资源，从而避免线程安全问题。它可以确保在任一时刻，只有一个线程可以执行同步代码块或方法，其他线程必须等待，直到当前线程执行完成。
+
+### 1. `synchronized` 方法
+`同步方法`意味着整个方法都被锁定，一次只能有一个线程进入该方法。如果一个对象有多个同步方法，当一个线程在其中一个方法中时，其他线程不能进入该对象的其他同步方法。
+
+```java
+public synchronized void exampleMethod() {
+    // 线程安全的代码
+}
+```
+
+- **实例方法**：锁住的是调用该方法的对象实例 (`this`)。
+- **静态方法**：锁住的是该类的 `Class` 对象 (`ClassName.class`)。
+
+### 2. `synchronized` 代码块
+如果只需要同步某一部分代码，使用 `synchronized` 代码块会更加灵活和高效。你可以锁定特定的对象，而不是整个方法。
+
+```java
+public void exampleMethod() {
+    synchronized(this) {
+        // 线程安全的代码
+    }
+}
+```
+
+- **锁对象**：`synchronized` 括号中的对象是锁，线程进入时必须获得该对象的锁。
+
+### 3. `synchronized` 原理
+Java 中的每个对象都有一个**监视器锁**，当线程访问 `synchronized` 方法或代码块时，必须先获取监视器锁。当一个线程获得锁后，其他线程无法获得该锁，只能等待，直到锁被释放。
+
+### 4. `synchronized` 的使用场景
+- 在多线程环境下访问共享资源时，使用 `synchronized` 来确保数据一致性。
+- 常用于实现线程安全的类，例如 `Vector`、`Hashtable` 等。
+
+### 5. 注意事项
+- **性能**：`synchronized` 会降低性能，因为它会让线程等待锁，因此不应滥用。
+- **死锁风险**：如果多个线程相互等待对方持有的锁，可能会造成死锁。
+
+
 
 #### 实现: 
 
 ```java
 //安全买票
 public class Demo27_SafeBuyTicket {
-   
-     
-     
+
     public static void main(String[] args) {
-   
-     
-     
+
         BuyTicket1 buyTicket = new BuyTicket1();
-        new Thread(buyTicket， "张三").start();
-        new Thread(buyTicket， "李四").start();
-        new Thread(buyTicket， "王五").start();
+        new Thread(buyTicket, "张三").start();
+        new Thread(buyTicket, "李四").start();
+        new Thread(buyTicket, "王五").start();
     }
 }
 
 class BuyTicket1 implements Runnable {
-   
-     
-     
+    
     //票
     private int ticketNums = 10;
     boolean flag = true;
 
     @Override
     public void run() {
-   
-     
-     
+
         //买票
         while (flag) {
-   
-     
-     
             try {
-   
-     
-     
                 buy();
             } catch (Exception e) {
-   
-     
-     
                 e.printStackTrace();
             }
         }
@@ -1406,37 +1434,25 @@ class BuyTicket1 implements Runnable {
 
     //synchronized 同步方法，锁的是this
     private synchronized void buy() {
-   
-     
-     
+
         //判断是否有票
         if (ticketNums <= 0) {
-   
-     
-     
             flag = false;
             return;
         }
         //延迟
         try {
-   
-     
-     
             Thread.sleep(1);
         } catch (InterruptedException e) {
-   
-     
-     
             e.printStackTrace();
         }
-
         //买票
         System.out.println(Thread.currentThread().getName() + "拿到" + ticketNums--);
     }
 }
 ```
 
-### 🍒4.同步块 
+### 4.同步块 
 
 ![pic_0e1dfd45.png](juc.assets/pic_0e1dfd45.png)  
 锁的对象就是变量的量，需要增删改查的对象
@@ -1464,13 +1480,10 @@ public class Demo28_SafeBank {
 }
 
 //账户
-class Account1 {
-   
-     
-     
+class Account1 {  
+    
     int money;//余额
     String cardName;//卡名
-
     public Account1(int money， String cardName) {
    
      
@@ -1634,13 +1647,7 @@ public class Demo30_ThreadJuc {
  * 解决:一个锁只锁一个对象
  */
 class Demo31_DeadLock {
-   
-     
-     
-    public static void main(String[] args) {
-   
-     
-     
+    public static void main(String[] args) { 
         Makeup makeup = new Makeup(0， "灰姑娘");
         Makeup makeup1 = new Makeup(1， "白雪公主");
         makeup.start();
@@ -2073,8 +2080,6 @@ class SynContainer {
      
             //通知消费者消费，等待生产
             try {
-   
-     
      
                 this.wait();
             } catch (InterruptedException e) {
