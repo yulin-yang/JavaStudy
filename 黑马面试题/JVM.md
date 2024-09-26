@@ -112,11 +112,11 @@ JAVA8之后把方法区放到了本地内存，主要是为了防止`oom`
 
  *  线程共享的区域: 主要用来保存对象实例， 数组等， 内存不够则抛出`OutOfMemoryError`异常
  *  组成: 年轻代 + 老年代
-    
+   
      *  年轻代被划分为三部分， `Eden`区和两个大小严格相同的`Survivor`区
      *  老年代主要保存生命周期长的对象， 一般是一些老的对象
  *  JDK1.7和1.8堆的区别
-    
+   
      *  1.7中堆中有一个永久代， 存储的是类信息、静态变量、常量、编译后的代码
      *  1.8在堆中移除了永久代， 把数据存储到了本地内存的元空间中， 防止内存溢出
 
@@ -146,11 +146,11 @@ Java Virtual Machine Stacks(Java虚拟机栈)
 ![pic_a8a71710.png](./JVM.assets/pic_a8a71710.png)
 
 1.  垃圾回收是否涉及栈内存?
-    
+  
     垃圾回收主要指的是**堆内存**， 当栈帧弹栈以后， 内存就会释放
     
 2.  栈内存分配越大越好吗?
-    
+  
     未必， 默认的栈内存通常为1024K
     
     每个线程都会创建虚拟机栈，栈帧过大会导致线程数变少
@@ -158,7 +158,7 @@ Java Virtual Machine Stacks(Java虚拟机栈)
     > 例如， 机器总内存为512m， 目前能过冬的线程数则为512个， 如果把栈内存改为2048k， 那么能活动的栈帧就会减半
     
 3.  方法内的局部变量是否线程安全?
-    
+  
     ![pic_7ecaa689.png](./JVM.assets/pic_7ecaa689.png)
     
      *  如果方法内局部变量没有逃离方法的作用范围， 它是线程安全的
@@ -176,31 +176,31 @@ Java Virtual Machine Stacks(Java虚拟机栈)
 #### 总结 
 
 1.  什么是虚拟机栈?
-    
+  
      *  每个线程运行时所需要的内存， 称为虚拟机栈
      *  每个栈由多个栈帧(frame)组成， 对应着每次方法调用时所占用的内存
      *  每个线程只能有一个活动栈帧， 对应着当前正在执行的那个方法
 2.  垃圾回收是否涉及栈内存?
-    
+  
     垃圾回收主要指的是堆内存， 当栈帧弹栈以后， 内存就会释放
 3.  栈内存分配越大越好吗?
-    
+  
     未必， 默认的栈内存通常为1024k， 栈帧过大会导致线程数变少，导致并发能力下降，资源利用率低
 4.  方法内的局部变量是否线程安全?
-    
+  
      *  如果方法内局部变量没有逃离方法的作用范围， 它是线程安全的
      *  如果局部变量引用了对象， 并逃离方法的作用范围， 需要考虑线程安全
 5.  什么情况下会导致栈内存溢出?
-    
+  
      *  栈帧过多导致栈内存溢出， 典型问题: 递归调用
      *  栈帧过大导致栈内存溢出
 6.  堆栈的区别是什么?
-    
+  
      *  栈内存一般会用来存储局部变量和方法调用， 但堆内存是用来存储Java对象和数组的
      *  堆会被GC垃圾回收， 而栈不会
      *  栈内存是线程私有的， 而堆内存是线程共享的
      *  两者异常错误不同， 但如果栈内存或者堆内存不足都会抛出异常
-        
+       
         栈空间不足: `java.lang.StackOverFlowError`
         
         堆空间不足: `java.lang.OutOfMemoryError`
@@ -335,13 +335,13 @@ Constant pool:
 #### 总结 
 
 1.  能不能解释一下方法区?
-    
+  
      *  方法区(Method Area)是各个线程共享的内存区域
      *  主要存储类的信息、运行时常量池
      *  虚拟机启动的时候创建， 关闭虚拟机时释放
      *  如果方法区域中的内存无法满足分配请求， 则会抛出`OutOfMemoryError: Metaspace`
 2.  介绍一下运行时常量池
-    
+  
      *  常量池: 可以看做是一张表， 虚拟机指令根据这张常量表找到要执行的类名、方法名、参数类型、字面量等信息
      *  当类被加载， 它的常量池信息就会放入运行时常量池， 并把里面的符号地址变为真实地址
 
@@ -470,7 +470,7 @@ JVM只会运行二进制文件， 类加载器的作用就是将字节码文件�
 #### 总结 
 
 1.  什么是类加载器
-    
+  
     JVM只会运行二进制文件， 类加载器的作用就是将字节码文件加载到JVM中， 从而让Java程序能够启动起来.
     
     换句话说类加载器是 Java 虚拟机（JVM）的一部分，负责在运行时动态加载 Java 类。
@@ -528,12 +528,12 @@ JVM只会运行二进制文件， 类加载器的作用就是将字节码文件�
 #### 总结 
 
 1.  什么是双亲委派模型?
-    
+  
     加载某一个类， 先委托上一级的加载器进行加载， 如果上级加载器也有上级， 则会继续向上委托， 如果该类委托上级没有被加载， 子加载器尝试加载该类
     
     ![pic_6b24bf64.png](./JVM.assets/pic_6b24bf64.png)
 2.  JVM为什么采用双亲委派模型?
-    
+  
      *  通过双亲委派机制可以避免某一个类被重复加载， 当父类已经加载后则无需重复加载， 保证唯一性
      *  为了安全， 保证类库API不会被修改
 
@@ -864,19 +864,19 @@ JVM垃圾回收算法有哪些?
 #### 工作机制 
 
  *  新创建的对象， 都会先分配到`Eden`区
-    
+   
     ![pic_3cd7299a.png](./JVM.assets/pic_3cd7299a.png)
  *  当伊甸园区内存不足， 标记伊甸园与`from`(现阶段没有)的存活对象
  *  将存活对象采用复制算法复制到`to`中， 复制完毕后， 伊甸园区和`from`区内存都得到释放
-    
+   
     ![pic_652d23f1.png](./JVM.assets/pic_652d23f1.png)
  *  经过一段时间后伊甸园区的内存又出现不足， 标记`Eden`区域`to`区存活的对象， 将存活的对象复制到`from`区
-    
+   
     ![pic_7a26d6b4.png](./JVM.assets/pic_7a26d6b4.png)
     
     ![pic_7c19db5c.png](./JVM.assets/pic_7c19db5c.png)
  *  当幸存者区对象熬过几次回收(最多15次)， 晋升到老年代(幸存者区内存不足或大对象会导致提前晋升)
-    
+   
     ![pic_54375a87.png](./JVM.assets/pic_54375a87.png)
     
     ![pic_8b418b65.png](./JVM.assets/pic_8b418b65.png)
@@ -896,11 +896,11 @@ JVM垃圾回收算法有哪些?
 说一下JVM中的分代回收
 
 1.  堆的区域划分
-    
+  
     1.  堆被分为了两份: 新生代和老年代(1: 2)
     2.  对于新生代， 内部有被分为了三个区域. `Eden`区， 幸存者区`Survivor`(分为`from`和`to`) (8: 1: 1)
 2.  对象回收分代回收策略
-    
+  
     1.  新创建的对象， 都会先分配到`Eden`区
     2.  当伊甸园内存不足， 标记伊甸园与`from`(现阶段没有)的存活对象
     3.  将存活对象采用复制算法复制到`to`中， 复制完毕后， 伊甸园和`from`内存都得到释放
@@ -985,24 +985,26 @@ CMS全称Concurrent Mark Sweep， 是一款并发的、使用标记-清除算法
 #### Young Collection(年轻代垃圾回收) 
 
  *  初始时， 所有区域都处于空闲状态
-    
+   
     ![pic_a71b3824.png](./JVM.assets/pic_a71b3824.png)
  *  创建了一些对象， 挑出一些空闲区域作为伊甸园区存储这些对象
-    
+   
     ![pic_969cc7e6.png](./JVM.assets/pic_969cc7e6.png)
  *  当伊甸园区需要垃圾回收时， 挑出一个空闲区域作为幸存者区， 用复制算法复制存活对象， 需要暂停用户线程
-    
+   
     ![pic_cbe39d55.png](./JVM.assets/pic_cbe39d55.png)
     
     > 在G1中， 新生代的内存占比不是固定的， 是在5%~6%之间波动， 但不管怎么波动， 内存都是限制的， 都会限制伊甸园区不能随意的创建新对象
     
     ![pic_57f266e2.png](./JVM.assets/pic_57f266e2.png)
  *  随着时间流逝， 伊甸园区的内存又有不足
-    
+   
     ![pic_81198d97.png](./JVM.assets/pic_81198d97.png)
- *  将伊甸园区一级之前幸存者区中的存活对象， 采用复制算法， 复制到新的幸存者区， 其中较老对象晋升至老年代
-    
+ *  将伊甸园区以及之前幸存者区中的存活对象， 采用复制算法， 复制到新的幸存者区， 其中较老对象晋升至老年代
+   
     ![pic_c29f4db7.png](./JVM.assets/pic_c29f4db7.png)
+    
+    此时可以将伊甸园区以及第一次的幸存者区进行释放
     
     ![pic_8df817e5.png](./JVM.assets/pic_8df817e5.png)
 
@@ -1013,8 +1015,8 @@ CMS全称Concurrent Mark Sweep， 是一款并发的、使用标记-清除算法
 ![pic_24b8a368.png](./JVM.assets/pic_24b8a368.png)
 
  *  并发标记之后， 会有重新标记阶段解决漏标问题， 此时需要暂停用户线程
- *  这些都完成后就知道了老年代有哪些存活对象， 随后进入混合回收阶段. 此时不会对所有老年代区域进行回收， 而是根据暂停时间目标优先回收价值高(存活对象少)的区域(这也是Gabage First名称的由来)
-    
+ *  这些都完成后就知道了老年代有哪些存活对象， 随后进入混合回收阶段. 此时不会对所有老年代区域进行回收， 而是根据暂停时间目标优先回收价值高(存活对象少，能够释放更多内存)的区域(这也是Gabage First名称的由来)
+   
     ![pic_3d0ec1f8.png](./JVM.assets/pic_3d0ec1f8.png)
     
     > 内部会有一个预期暂停时间， 回收的暂停时间不能超过这个值
@@ -1023,11 +1025,18 @@ CMS全称Concurrent Mark Sweep， 是一款并发的、使用标记-清除算法
 
 混合收集阶段中， 参与复制的有`Eden`、`Survivor`、`Old`
 
+- 把伊甸园区和幸存者区中的一部分对象复制到一个新的幸存者区（下图中的绿色箭头
+- 把旧幸存者区中到了一定阈值的对象以及被标记的老年代的对象复制到一个新的老年代
+
 ![pic_cde37a8e.png](./JVM.assets/pic_cde37a8e.png)
 
 复制完成， 内存得到释放. 进入下一轮的新生代回收、并发标记、混合回收
 
 ![pic_e8aa4b2a.png](./JVM.assets/pic_e8aa4b2a.png)
+
+G1会专门开辟一块连续的内存空间用来存储大对象（下图红色部分
+
+![image-20240926123448811](./JVM.assets/image-20240926123448811.png)
 
 #### 总结 
 
@@ -1042,58 +1051,55 @@ CMS全称Concurrent Mark Sweep， 是一款并发的、使用标记-清除算法
 
 ### 强引用、软引用、弱引用、虚引用 区别 
 
- *  强引用: 只有所有`GC Roots`对象都不通过(强引用)引用该对象， 该对象才能被垃圾回收
-    
+主要说的是在GC的时候，不同引用的对象，GC的情况不同
+
+ 1. **强引用:** 只有所有`GC Roots`对象都不通过[强引用]引用该对象， 该对象才能被垃圾回收
+
     ```java
     User user = new User();
     ```
-    
+
     ![pic_7ece08a9.png](./JVM.assets/pic_7ece08a9.png)
- *  软引用: 仅有软引用引用该对象时， 在垃圾回收后， 内存仍然不足时会再次触发垃圾回收
-    
+ 2. **软引用:** 仅有软引用引用该对象时， 在垃圾回收后， 内存仍然不足时会再次触发垃圾回收
+
     ```java
     User user = new User();
     SoftReference softReference = new SoftReference(user);
     ```
-    
+
     ![pic_b16f33ba.png](./JVM.assets/pic_b16f33ba.png)
- *  弱引用: 仅有弱引用引用该对象时， 在垃圾回收时， 无论内存是否充足， 都会回收弱引用对象
-    
+ 3. **弱引用:** 仅有弱引用引用该对象时， 在垃圾回收时， 无论内存是否充足， 都会回收弱引用对象
+
     ```java
     User user - new User();
     WeakReference weakReference = new WeakReference(user);
     ```
-    
+
     ![pic_c92d2ede.png](./JVM.assets/pic_c92d2ede.png)
-    
+
     延伸话题: ThreadLocal内存泄漏问题
-    
+
     ```java
     static class Entry extends WeakReference<ThreadLocal<?>> {
-         
-           
-           
+     
         Object value;
     
         Entry(ThreadLocal<?> k， Object v) {
-         
-           
-           
             super(k);
             value = v; //强引用，不会被回收
         }
     }
     ```
- *  虚引用: 必须配合引用队列使用， 被引用对象回收时， 会将虚引用入队， 由`Reference Handler`线程调用虚引用相关方法释放直接内存
-    
+ 4. **虚引用:** 必须配合引用队列使用， 被引用对象回收时， 会将虚引用入队， 由`Reference Handler`线程调用虚引用相关方法释放直接内存
+
     ```java
     User user = new User();
     ReferenceQueue referenceQueue = new ReferenceQueue();
     PhantomReference phantomReference = new PhantomReference(user，queue);
     ```
-    
+
     ![pic_8c5fcb04.png](./JVM.assets/pic_8c5fcb04.png)
-    
+
     弱引用和软引用也可以通过引用队列来释放自己的资源
 
 #### 总结 
@@ -1104,8 +1110,6 @@ CMS全称Concurrent Mark Sweep， 是一款并发的、使用标记-清除算法
  *  软引用: 需要配合`SoftReference`使用， 当垃圾多次回收， 内存依然不够的时候会回收软引用对象
  *  弱引用: 需要配合`WeakReference`使用， 只要进行了垃圾回收， 就会把弱引用对象回收
  *  虚引用: 必须配合引用队列使用， 被引用对象回收时， 会将虚引用加入到队列中， 由`Reference Handler`线程调用虚引用相关方法释放直接内存
-
-\+++
 
 ## JVM实践 
 
@@ -1124,7 +1128,7 @@ CMS全称Concurrent Mark Sweep， 是一款并发的、使用标记-清除算法
 
 通常在Linux系统下直接加参数启动SpringBoot项目
 
-```java
+```bash
 nohup java -Xms512m -Xmx1024m -jar xxxx.jar --spring.profiles.active=prod &
 ```
 
@@ -1137,10 +1141,10 @@ nohup java -Xms512m -Xmx1024m -jar xxxx.jar --spring.profiles.active=prod &
 JVM调优的参数可以在哪里设置参数值?
 
  *  war包部署在Tomcat中设置
-    
+   
     修改TOMCAT\_HOME/bin/catalina.sh(.bat)文件
  *  jar包部署在启动参数设置
-    
+   
     `java -Xms512m -Xmx1024m -jar xxxx.jar`
 
 ### JVM调优的参数 
@@ -1184,7 +1188,7 @@ https://www.oracle.com/java/technologies/javase/vmoptions-jsp.html
 
 虚拟机栈的设置: 每个线程默认会开启1M的内存， 用于存放栈帧、调用参数、局部变量等， 但一般256K就够用. 通常较少每个线程的堆栈， 可以产生更多的线程， 但这实际上还受限于操作系统.
 
-```java
+```bash
 -Xss 对每个线程stack大小的调整.
 -Xss128k
 ```
@@ -1238,14 +1242,14 @@ survivor:eden = 2:8
 #### 说一下JVM调优的工具? 
 
  *  命令工具
-    
+   
      *  `jps`: 进程状态信息
      *  `jstack`: 查看Java进程内线程的堆栈信息
      *  `jmap`: 查看堆转信息
      *  `jhat`: 堆转储快照分析工具
      *  `jstat`: JVM统计监测工具
  *  可视化工具
-    
+   
      *  `jconsole`: 用于堆JVM的内存， 线程， 类 的监控
      *  `VisualVM`: 能够监控线程， 内存情况
 
@@ -1399,14 +1403,14 @@ PS Old Generation  //老年代 使用情况
 是JVM统计监测工具. 可以用来显示垃圾回收信息、类加载信息、新生代统计信息等.
 
 1.  总结垃圾回收统计
-    
+  
     ```java
     jstat -gcutil pid
     ```
     
     ![pic_b05932c6.png](./JVM.assets/pic_b05932c6.png)
 2.  垃圾回收统计
-    
+  
     ```java
     jstat -gc pid
     ```
@@ -1503,12 +1507,12 @@ public class ToolDemo {
 流程:
 
 1.  通过`jmap`指令打印它的内存快照dump(Dump文件是进程的内存镜像， 可以把程序的执行状态通过调试器保存到dump文件中)
-    
+  
      *  使用`jmap`命令获取运行中程序的dump文件
-        
+       
         `jmap -dump:format=b，file=heap.hprof pid`
      *  使用vm参数获取dump文件
-        
+       
         有的情况是内存溢出之后程序则会直接终端， 而`jmap`只能打印在运行中的程序， 所以建议通过参数的方法生成dump文件
         
         ```java
@@ -1516,15 +1520,15 @@ public class ToolDemo {
         -XX:HeapDumpPath=***/***
         ```
 2.  通过工具， VisualVM去分析dump文件，VisualVM可以加载离线的dump文件
-    
+  
     文件–>装入—>选择dump文件即可查看堆快照信息
     
     ![pic_ad99ea68.png](./JVM.assets/pic_ad99ea68.png)
 3.  通过查看堆信息的情况，可以大概定位内存溢出是哪行代码出了问题
-    
+  
     ![pic_c3348ca1.png](./JVM.assets/pic_c3348ca1.png)
 4.  找到对应的代码，通过阅读上下文的情况，进行修复即可
-    
+  
     ![pic_51329f5d.png](./JVM.assets/pic_51329f5d.png)
 
 #### 总结 
@@ -1541,11 +1545,11 @@ java内存泄漏的排查思路?
 ### CPU飚高排查方案与思路 
 
 1.  使用`top`命令查看占用CPU的情况
-    
+  
     ![pic_a7696748.png](./JVM.assets/pic_a7696748.png)
 2.  通过`top`命令查看后，可以查看是哪一个进程占用cpu较高，上图所示的进程为：40940
 3.  查看进程中的线程信息
-    
+  
     ```java
     ps H -eo pid，tid，%cpu | grep 40940
     ```
@@ -1554,7 +1558,7 @@ java内存泄漏的排查思路?
     
     通过以上分析，在进程40940中的线程40950占用cpu较高
 4.  可以根据线程 id 找到有问题的线程，进一步定位到问题代码的源码行号
-    
+  
     ```java
     jstack 40940   此处是进程id
     ```
