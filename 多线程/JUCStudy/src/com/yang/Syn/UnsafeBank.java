@@ -43,6 +43,7 @@ class Drawing extends Thread {
     @Override
     public void run() {
 
+        synchronized (account) {
         //判断是否有钱
         if (account.money - drawingMoney < 0) {
             System.out.println(Thread.currentThread().getName() + "余额不足,不能进行取钱");
@@ -60,5 +61,6 @@ class Drawing extends Thread {
         System.out.println(account.cardName + "余额为:" + account.money);
         //this.getName()==Thread.currentThread().getName()
         System.out.println(this.getName() + "手里的钱:" + nowMoney);
+        }
     }
 }

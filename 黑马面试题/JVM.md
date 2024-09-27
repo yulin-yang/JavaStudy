@@ -268,6 +268,14 @@ public class MetaspaceDemo extends ClassLoader {
 
 可以通过`javap -v XX.class`查看字节码结构(类的基本信息、常量池、方法定义)，显示信息如下：
 
+> 在idea中打开project structure
+>
+> ![image-20240927160854577](./JVM.assets/image-20240927160854577.png)
+>
+> ![image-20240927160943014](./JVM.assets/image-20240927160943014.png)
+>
+> 在这个路径下输入 `javap -v Test.class`
+
 类的基本信息:
 
 ![pic_275bb768.png](./JVM.assets/pic_275bb768.png)

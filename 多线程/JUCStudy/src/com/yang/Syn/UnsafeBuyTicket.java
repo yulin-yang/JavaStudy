@@ -31,7 +31,8 @@ class BuyTicket implements Runnable {
     }
 
     //买票
-    private void buy() {
+    private synchronized void buy() {
+
         //判断是否有票
         if (ticketNums <= 0) {
             flag = false;
@@ -43,7 +44,6 @@ class BuyTicket implements Runnable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
         //买票
         System.out.println(Thread.currentThread().getName() + "拿到" + ticketNums--);
     }
