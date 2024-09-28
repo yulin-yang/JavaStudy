@@ -546,23 +546,14 @@ public class Demo10_Lamda1 {
 
 ```java
 public class Demo11_Lamda2 {
-   
-     
-     
+
     public static void main(String[] args) {
-   
-     
-     
+
         //4.局部内部类
         class Like12 implements ILike {
-   
-     
      
             @Override
             public void lamda() {
-   
-     
-     
                 System.out.println("I like lamda2");
             }
         }

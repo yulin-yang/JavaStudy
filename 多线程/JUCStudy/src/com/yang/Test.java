@@ -1,10 +1,12 @@
 package com.yang;
 
+import sun.misc.Unsafe;
+
 import java.lang.reflect.Field;
 
 public class Test {
 
     public static void main(String[] args) {
-        System.out.println("hello");
+        ThreadLocal threadLocal = new ThreadLocal();
     }
 }
