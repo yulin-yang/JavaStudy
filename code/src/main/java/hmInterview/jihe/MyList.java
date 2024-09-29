@@ -1,34 +1,60 @@
 package hmInterview.jihe;
 
 
-import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.*;
 
-public class MyList {
-    // 泛型方法 printArray
-    public static < E > void printArray( E[] inputArray )
-    {
-        // 输出数组元素
-        for ( E element : inputArray ){
-            System.out.printf( "%s ", element );
+class Solution {
+
+    //自己写一个翻转方法，来翻转 c 数组从起始位置 start 到终止位置 end的元素
+    public void reverSubStr(char[] c, int start, int end) {
+
+        char tmp;
+        while(start < end) {
+            tmp = c[start];
+            c[start] = c[end];
+            c[end] = tmp;
+            start++;
+            end--;
         }
-        System.out.println();
     }
 
-    public static void main( String args[] )
-    {
-        // 创建不同类型数组： Integer, Double 和 Character
-        Integer[] intArray = { 1, 2, 3, 4, 5 };
-        Double[] doubleArray = { 1.1, 2.2, 3.3, 4.4 };
-        Character[] charArray = { 'H', 'E', 'L', 'L', 'O' };
+    public String reverseStr(String s, int k) {
 
-        System.out.println( "整型数组元素为:" );
-        printArray( intArray  ); // 传递一个整型数组
+        char[] c = s.toCharArray();
+        char tmp;
 
-        System.out.println( "\n双精度型数组元素为:" );
-        printArray( doubleArray ); // 传递一个双精度型数组
+        for(int i = 0; i < c.length; i += 2 * k){
 
-        System.out.println( "\n字符型数组元素为:" );
-        printArray( charArray ); // 传递一个字符型数组
+            int start = i;
+            //判断从当前位置开始往后的字符还有没有k个
+            //如果有的话，翻转尾指针就指向 start + k
+            //如果不够的话，就指向数组最后一个元素
+            int end = Math.min(start + k, c.length - 1);
+
+            //开始翻转
+            reverSubStr(c, start, end);
+        }
+
+        return new String(c);
+    }
+}
+
+
+public class MyList {
+
+    public static void main(String args[]) {
+
+        char[] c = "abcdef".toCharArray();
+        Solution solution = new Solution();
+        solution.reverSubStr(c, 0, c.length - 1);
+
+        System.out.println(new String(c));
+
+
+
+
+
+
+
     }
 }
