@@ -1137,10 +1137,12 @@ G1会专门开辟一块连续的内存空间用来存储大对象（下图红色
 
 ## JVM实践 
 
+我们一般在idea中设置的参数都是临时参数，那么在项目部署的时候如何设置？
+
 ### JVM调优的参数可以在哪里设置 
 
  *  war包部署在Tomcat中设置
- *  jar包部署在启动参数设置
+ *  jar包部署在启动参数设置 --springboot项目
 
 #### war包部署在Tomcat中设置 
 
@@ -1213,7 +1215,7 @@ https://www.oracle.com/java/technologies/javase/vmoptions-jsp.html
 虚拟机栈的设置: 每个线程默认会开启1M的内存， 用于存放栈帧、调用参数、局部变量等， 但一般256K就够用. 通常较少每个线程的堆栈， 可以产生更多的线程， 但这实际上还受限于操作系统.
 
 ```bash
--Xss 对每个线程stack大小的调整.
+-Xss #对每个线程stack大小的调整.
 -Xss128k
 ```
 
@@ -1221,9 +1223,9 @@ https://www.oracle.com/java/technologies/javase/vmoptions-jsp.html
 
 设置年轻代中`Eden`区和两个`Survivor`区的大小比例. 该值如果不设置， 则默认比例为 8: 1: 1. 通过增大`Eden`区的大小， 来减少YGC发生的次数， 但有时我们发现， 虽然次数减少了， 但`Eden`区满的时候， 由于占用的空间较大， 导致释放缓慢， 此时STW的时间较长， 因此需要按照程序情况区调优.
 
-```java
+```bash
 -XXSurvivorRatio=8， 
-表示年轻代中的分配比例: 
+# 表示年轻代中的分配比例: 
 survivor:eden = 2:8
 ```
 
@@ -1231,7 +1233,7 @@ survivor:eden = 2:8
 
 #### 年轻代晋升老年代阈值 
 
-```java
+```bash
 -XX:MaxTenuringThreshold=threshold
 ```
 

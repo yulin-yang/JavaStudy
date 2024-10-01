@@ -1,74 +1,46 @@
 package com.yang.dataStructure;
+import sun.reflect.generics.tree.Tree;
+
 import java.util.*;
 
-/**
- * Your MyQueue object will be instantiated and called as such:
- * MyQueue obj = new MyQueue();
- * obj.push(x);
- * int param_2 = obj.pop();
- * int param_3 = obj.peek();
- * boolean param_4 = obj.empty();
- */
+class TreeNode {
+      int val;
+      TreeNode left;
+      TreeNode right;
+      TreeNode() {}
+      TreeNode(int val) { this.val = val; }
+      TreeNode(int val, TreeNode left, TreeNode right) {
+          this.val = val;
+          this.left = left;
+          this.right = right;
+      }
+  }
 
+class Solution {
 
-class MyStack2 {
+    private void proOrder(TreeNode root, List<Integer> res) {
+        if(root == null) {
+            return;
+        }
 
-    Queue<Integer> queueIn;
-    Queue<Integer> queueOut;
-
-    public MyStack2() {
-        queueIn = new LinkedList<>();
-        queueOut = new LinkedList<>();
+        proOrder(root.left, res);
+        res.add(root.val);
+        proOrder(root.right, res);
     }
 
-    public void push(int x) {
-        queueIn.add(x);
-    }
+    public List<Integer> preorderTraversal(TreeNode root) {
 
-    public int pop() {
-        Integer remove = null;
-        while(!queueIn.isEmpty()) {
-            if(queueIn.size() == 1) {
-                remove = queueIn.poll();
-                break;
-            }
-            queueOut.add(queueIn.poll());
-        }
-        //再把所有元素转移到queueIn
-        while(!queueOut.isEmpty()) {
-            queueIn.add(queueOut.poll());
-        }
-        return remove;
-    }
-
-    public int top() {
-        Integer remove = null;
-        while(!queueIn.isEmpty()) {
-            if(queueIn.size() == 1) {
-                remove = queueIn.peek();
-            }
-            queueOut.add(queueIn.poll());
-        }
-        //再把所有元素转移到queueIn
-        while(!queueOut.isEmpty()) {
-            queueIn.add(queueOut.poll());
-        }
-        return remove;
-    }
-
-    public boolean empty() {
-        return queueIn.isEmpty();
+        List<Integer> res = new ArrayList<>();
+        proOrder(root, res);
+        return res;
     }
 }
+
+
 
 public class MyTest {
 
     public static void main(String[] args) {
-
-        MyStack2 myStack2 = new MyStack2();
-        myStack2.push(1);
-        myStack2.pop();
-        myStack2.empty();
 
 
     }
