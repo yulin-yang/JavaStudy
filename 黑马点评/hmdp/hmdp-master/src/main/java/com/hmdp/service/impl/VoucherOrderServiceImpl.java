@@ -67,18 +67,19 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             String queueName="stream.orders";
             while (true) {
                 try {
-                    //从消息队列中获取订单信息
+                    // 1.获取消息队列中的订单信息 XREADGROUP GROUP g1 c1 COUNT 1 BLOCK 2000 STREAMS streams.order >
                     List<MapRecord<String, Object, Object>> list = stringRedisTemplate.opsForStream().read(
                             Consumer.from("g1", "c1")
                             , StreamReadOptions.empty().count(1).block(Duration.ofSeconds(2))
                             , StreamOffset.create(queueName, ReadOffset.lastConsumed())
                     );
-                    //判断消息时候获取成功
+                    //2.判断订单信息是否为空
                     if (list==null||list.isEmpty()){
-                        //获取失败 没有消息 继续循环
+                        //如果为null，说明没有消息，继续下一次循环
                         continue;
                     }
                     //获取成功 解析消息
+                    //因为我们在读的时候只读了一个，所以这里直接下标为1就可以了
                     MapRecord<String, Object, Object> record = list.get(0);
                     Map<Object, Object> values = record.getValue();
                     VoucherOrder voucherOrder = BeanUtil.fillBeanWithMap(values, new VoucherOrder(), true);
@@ -88,6 +89,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     stringRedisTemplate.opsForStream().acknowledge(queueName,"g1",record.getId());
                 } catch (Exception e) {
                     e.printStackTrace();
+                    //如果在处理消息的时候出现了异常，会把消息传入到pendingList，我们再去pendingList中获取消息
                     handlePendingList();
                 }
             }
@@ -99,14 +101,15 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         while (true){
             try {
                 //从消息队列中获取订单信息
+                //PendingList不需要阻塞，而且参数为 0
                 List<MapRecord<String, Object, Object>> list = stringRedisTemplate.opsForStream().read(
                         Consumer.from("g1", "c1")
                         , StreamReadOptions.empty().count(1)
                         , StreamOffset.create(queueName, ReadOffset.from("0"))
                 );
-                //判断消息时候获取成功
+                //2.判断订单信息是否为空
                 if (list==null||list.isEmpty()){
-                    //获取失败 没有消息 继续循环
+                    // 如果为null，说明pendingList中没有异常消息，结束循环
                     break;
                 }
                 //获取成功 解析消息

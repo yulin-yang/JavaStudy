@@ -12,7 +12,7 @@
 
 一定要结合场景来回答！！！
 
-![image-20240922151319765](assets/image-20240922151319765.png)
+![image-20240904114423098](./Redis.assets/cbea856df5af309a11b9060d12292daf.png)
 
 ### 缓存穿透 
 
@@ -573,7 +573,7 @@ Redisson新增了看门狗机制和重试机制
 > 2. **公平性**：可重入锁可以是公平的或非公平的。公平锁确保按请求的顺序（先到先得）来获取锁，而非公平锁则允许线程在竞争中随机选择获取锁。
 > 3. **灵活性**：可重入锁可以通过 `java.util.concurrent.locks.ReentrantLock` 类实现，提供了更多的控制选项，比如尝试锁定（tryLock）、定时锁定（lockInterruptibly）等。
 
-![pic_272f4b1b.png](Redis.assets/pic_272f4b1b.png)
+![pic_272f4b1b.png](Redis.assets/pic_272f4b1b.p                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   ng)
 
 利用hash结构记录线程id和重入次数
 
@@ -629,27 +629,37 @@ zookeeper是CP思想: 即一致性与分区容忍性, 是保持强一致的
 
 单节点Redis的并发能力是有上限的, 要进一步提高Redis的并发能力, 就需要搭建主从集群, 实现读写分离
 
+![image-20241011100829370](./Redis.assets/image-20241011100829370.png) 
+
 主从数据同步原理
 
-主从全量同步:
+**主从全量同步:**
+
+> 简单总结有三个大步骤
+>
+> 1. 从节点slave发起请求给主节点master想要同步数据，主节点master判断是不是第一次请求，如果不是就全量同步。
+> 2. 主节点master会执行bgsave去生成一个rdb文件，发送给从节点slave去执行。
+> 3. 主节点master在进入rdb期间接收的其他的命令会进入一个repl_baklog的日志中，然后再把这个日志发送给从节点去执行。
 
 ![pic_ed133f28.png](Redis.assets/pic_ed133f28.png)
 
 `Replication Id`: 简称`replid`, 是数据集的标记, id一致则说明是同一数据集. 每一个`master`都有唯一的`replid`, `slave`则会继承`master`节点的`replid`
 
-`offset`: 偏移量, 随着记录在`repl_baklog`中的数据增多而逐渐增大. `slave`完成同步时也会记录当前同步的`offset`. 如果`slave`的`offset`小雨`master`的`offset`, 说明`slave`的数据落后于`master`, 需要更新.
+`offset`: 偏移量，是一个自增的整数， 随着记录在`repl_baklog`中的数据增多而逐渐增大. `slave`完成同步时也会记录当前同步的`offset`. 如果`slave`的`offset`小雨`master`的`offset`, 说明`slave`的数据落后于`master`, 需要更新.
 
-主从增量同步(`slave`重启或后期数据变化)
+**主从增量同步**(`slave`重启或后期数据变化)
 
 ![pic_6016b7c7.png](Redis.assets/pic_6016b7c7.png)
 
 ##### 面试官: 介绍一下Redis的主从同步 
 
-答: 单节点Redis的并发能力是有上限的, 要进一步提高Redis的并发能力, 就需要搭建主从集群, 实现读写分离. 一般都是一主多从, 主节点负责写数据, 从节点负责读数据
+答: 单节点Redis的并发能力是有上限的, 要进一步提高Redis的并发能力, 就需要搭建主从集群, 实现读写分离
+
+> 一般都是一主多从, 主节点负责写数据, 从节点负责读数据
 
 ##### 面试官: 能说一下, 主从同步数据的流程吗? 
 
-全量同步:
+**全量同步:**
 
 1.  从节点请求主节点同步数据(携带`Replication Id`、`offset`)
 2.  主节点判断是否是第一次请求, 是第一次就与从节点同步版本信息(携带`Replication Id`和`offset`)
@@ -657,7 +667,7 @@ zookeeper是CP思想: 即一致性与分区容忍性, 是保持强一致的
 4.  在`RDB`生成执行期间, 主节点会以命令的方式记录到缓冲区(一个日志文件)
 5.  把生成之后的命令日志文件发送给从节点进行同步
 
-增量同步:
+**增量同步:**
 
 1.  从节点请求主节点同步数据, 主节点判断是不是第一次请求, 不是第一次就获取从节点的`offset`值
 2.  主节点从命令日志中获取`offset`值之后的数据, 发送给从节点进行数据同步
@@ -668,11 +678,11 @@ zookeeper是CP思想: 即一致性与分区容忍性, 是保持强一致的
 
 Redis提供了哨兵(Sentinel) 机制来实现主从集群的自动故障恢复. 哨兵的结构和作用如下
 
-![pic_effc66d8.png](Redis.assets/pic_effc66d8.png)
-
  *  监控: Sentinel会不断检查您的`master`和`slave`是否按照预期工作
  *  自动故障恢复: 如果`master`故障, Sentinel会将一个`slave`提升为`master`. 当故障实例恢复后也以新的master为主
  *  通知: Sentinel充当Redis客户端的服务发现来源, 当集群发生故障转移时, 会将最新信息推送给Redis的客户端
+
+![pic_effc66d8.png](Redis.assets/pic_effc66d8.png)
 
 ##### 服务状态监控 
 
@@ -706,7 +716,7 @@ Sentinel基于心跳机制监测服务状态, 每隔1秒向集群的每个实例
 
 此时, 老主节点变为子节点后会向新主节点发送同步数据请求, 并且清空自己的数据. 那么, 在故障期间, 在老主节点中写入的数据将会全部丢失. 这就是脑裂问题
 
-解决:
+**解决:**
 
 Redis中有两个配置参数:
 
