@@ -329,7 +329,7 @@ MySQL的InnoDB引擎采用的是B+树的数据结构来存储索引
 
 在数据量比较大时, 如果进行`limit`分页查询, 在查询时, 越往后, 分页查询效率越低.
 
-查询耗时对比:
+查询耗时对比:0=
 
 ![pic_141dc1ab.png](mysql.assets/pic_141dc1ab.png)
 
