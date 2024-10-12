@@ -1396,6 +1396,118 @@ dao接口
 
 **#{}     ${} 区别**
 
+
+
+> 在 MyBatis 中，`#` 和 `$` 都是用于将参数传递到 SQL 语句中的占位符，但它们的处理方式和使用场景不同。主要区别在于安全性和 SQL 语句生成的不同。
+>
+> ### 1. **#{} 占位符**
+>
+> - `#` 表示**预编译参数**占位符，MyBatis 会将参数放在 `#{} ` 处，使用 **JDBC 预编译**机制将参数传入 SQL。
+> - **防止 SQL 注入**：MyBatis 会将 `#` 中的参数值进行**自动转义**，从而防止 SQL 注入攻击。
+> - MyBatis 会将 `#` 内的参数替换为一个 **问号（?）**，并使用预编译的方式将实际参数值传递给数据库。
+>
+> #### 示例：
+>
+> ```sql
+> SELECT * FROM user WHERE name = #{name}
+> ```
+>
+> 如果 `name` 的值为 `John`，MyBatis 会将这个 SQL 转换为：
+>
+> ```sql
+> SELECT * FROM user WHERE name = ?
+> ```
+>
+> 然后 MyBatis 使用 JDBC 预编译语句，将 `John` 作为参数安全地传递给数据库。
+>
+> #### 适用场景：
+> - 用于传递**值**，尤其是在条件语句（如 `WHERE`、`SET` 子句）中。
+>
+> ### 2. **${} 占位符**
+>
+> - `$` 表示**直接拼接参数**占位符，MyBatis 会将参数值**直接嵌入**到生成的 SQL 语句中，不会对参数进行转义。
+> - **不防止 SQL 注入**：由于参数直接拼接到 SQL 中，使用不当时可能导致 SQL 注入攻击的风险。
+> - 使用 `$` 时，MyBatis 会将参数的值直接插入到 SQL 语句中。
+>
+> #### 示例：
+>
+> ```sql
+> SELECT * FROM user WHERE name = '${name}'
+> ```
+>
+> 如果 `name` 的值为 `John`，MyBatis 会将这个 SQL 转换为：
+>
+> ```sql
+> SELECT * FROM user WHERE name = 'John'
+> ```
+>
+> #### 适用场景：
+> - 用于传递**数据库对象的名称**（如表名、列名等），或 SQL 语句中的动态部分，如排序字段、表名等，但不适合传递用户输入的动态内容。
+>
+> ### 3. **#{} 和 ${} 的对比**
+>
+> | 特性            | `#{} `                             | `${}`                                        |
+> | --------------- | ---------------------------------- | -------------------------------------------- |
+> | 参数处理方式    | 预编译，用 `?` 占位，防止 SQL 注入 | 直接拼接到 SQL 中，不防止 SQL 注入           |
+> | SQL 注入安全性  | 安全                               | 不安全                                       |
+> | 使用场景        | 传递用户输入的数据，如条件、参数等 | 传递数据库对象，如表名、列名、动态排序字段等 |
+> | 适用的 SQL 位置 | WHERE 条件、INSERT、UPDATE 等      | 表名、列名、ORDER BY、动态 SQL 等            |
+>
+> ### 4. 使用示例
+>
+> #### `#{} 示例`：
+>
+> ```xml
+> <select id="findUserByName" parameterType="String" resultType="User">
+>     SELECT * FROM user WHERE name = #{name}
+> </select>
+> ```
+>
+> 传入 `name = "John"`，最终生成的 SQL 是：
+>
+> ```sql
+> SELECT * FROM user WHERE name = ?
+> ```
+>
+> 然后 MyBatis 会使用预编译将 `John` 作为参数绑定到这个查询上。
+>
+> #### `${} 示例`：
+>
+> ```xml
+> <select id="findUserByTableName" parameterType="String" resultType="User">
+>     SELECT * FROM ${tableName}
+> </select>
+> ```
+>
+> 传入 `tableName = "user"`，最终生成的 SQL 是：
+>
+> ```sql
+> SELECT * FROM user
+> ```
+>
+> #### 安全性对比：
+>
+> 如果使用 `${}` 处理用户输入的动态内容，如 `name`，可能会引发 SQL 注入：
+>
+> ```xml
+> <select id="findUserByName" parameterType="String" resultType="User">
+>     SELECT * FROM user WHERE name = '${name}'
+> </select>
+> ```
+>
+> 假设传入的 `name` 是 `John' OR '1'='1`，最终生成的 SQL 会变为：
+>
+> ```sql
+> SELECT * FROM user WHERE name = 'John' OR '1'='1'
+> ```
+>
+> 这样会导致返回所有用户的数据，形成 SQL 注入漏洞。
+>
+> ### 总结
+>
+> - **#{}**：安全的预编译方式，适合传递参数，防止 SQL 注入。
+> - **${}**：直接拼接方式，适合传递动态的数据库对象（如表名、列名等），但要小心 SQL 注入风险。
+
 ## 9、Lombok
 
 ```java
