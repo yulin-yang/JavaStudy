@@ -396,6 +396,16 @@ string类型的使用场景：value除了字符串还可以是数字
 
 ## 2、List
 
+Redis列表是简单的字符串列表，按照插入顺序排序。你可以添加一个元素到列表的头部（左边）或者尾部（右边）
+
+一个列表最多可以包含2 32 − 1 2^{32} - 12 
+32
+ −1 个元素 (4294967295, 每个列表超过40亿个元素)。
+
+首先我们列表，可以经过规则定义将其变为队列、栈、双端队列等
+
+正如图Redis中List是可以进行双端操作的，所以命令也就分为了LXXX和RXXX两类，有时候L也表示List例如LLEN
+
 ### 添加元素`lpush,rpush`
 
 ```shell
@@ -569,11 +579,685 @@ OK
 
 消息队列
 
-## 3、Set
 
-## 4、Hash
 
-## 5、Zset
+## 3、Set(集合) 
+
+Redis的Set是string类型的无序集合。集合成员是唯一的，这就意味着集合中不能出现重复的数据。
+
+Redis 中 集合是通过哈希表实现的，所以添加，删除，查找的复杂度都是O(1)。
+
+![pic_fac6eb29.png](./redis.assets/pic_fac6eb29.png)
+
+```bash
+####################################################
+127.0.0.1:6379> sadd myset hello  #set集合中添加元素
+(integer) 1
+127.0.0.1:6379> sadd myset zhangsan
+(integer) 1
+127.0.0.1:6379> sadd myset lisi
+(integer) 1
+127.0.0.1:6379> smembers myset  #查看指定set的所有值
+1) "hello"
+2) "lisi"
+3) "zhangsan"
+127.0.0.1:6379> sismember myset lisi #判断某一个值是不是在set集合中
+(integer) 1
+127.0.0.1:6379> sismember myset world
+(integer) 0
+
+####################################################
+scard
+127.0.0.1:6379> scard myset #获取set集合中内容的元素个数！
+(integer) 3
+127.0.0.1:6379> sadd myset hello
+(integer) 0
+####################################################
+rem
+127.0.0.1:6379> srem myset hello #移除set集合中的指定元素
+(integer) 1
+127.0.0.1:6379> SMEMBERS myset
+1) "lisi"
+2) "zhangsan"
+127.0.0.1:6379> scard myset
+(integer) 2
+
+####################################################
+set 无序不重复集合。比如：随机抽奖
+127.0.0.1:6379> srandmember myset   #随机抽选出一个元素
+"lisi"
+127.0.0.1:6379> srandmember myset 
+"zhangsan"
+127.0.0.1:6379> srandmember myset 
+"zhangsan"
+127.0.0.1:6379> srandmember myset 
+"lisi"
+127.0.0.1:6379> SMEMBERS myset
+1) "lisi"
+2) "zhangsan"
+127.0.0.1:6379> srandmember myset 2  #随机抽选出两个元素
+1) "lisi"
+2) "zhangsan"
+
+####################################################
+删除定的key，删除随机的key
+
+127.0.0.1:6379> SMEMBERS myset
+1) "111"
+2) "blue"
+3) "lisi"
+4) "zhangsan"
+127.0.0.1:6379> spop myset  #随机删除一些set集合中的元素
+"lisi"
+127.0.0.1:6379> spop myset
+"111"
+127.0.0.1:6379> SMEMBERS myset
+1) "blue"
+2) "zhangsan"
+
+####################################################
+smove 将一个指定的值，移动到另外一个set集合
+127.0.0.1:6379> sadd myset world zhangsan 
+(integer) 2
+127.0.0.1:6379> SMEMBERS myset
+1) "hello"
+2) "world"
+3) "hello2"
+4) "hello3"
+5) "zhangsan"
+127.0.0.1:6379> smove myset myset2 zhangsan   #将myset中的zhangsan移动到myset2集合中去
+(integer) 1
+127.0.0.1:6379> SMEMBERS myset
+1) "world"
+2) "hello2"
+3) "hello3"
+4) "hello"
+127.0.0.1:6379> SMEMBERS myset2
+1) "zhangsan"
+
+####################################################
+微博，B站中的共同关注！(并集)
+- 差集  sdiff
+- 交集  sinter
+- 并集  sunion
+127.0.0.1:6379> sadd key1 a b c d 
+(integer) 4
+127.0.0.1:6379> sadd key2 c d e f
+(integer) 4
+127.0.0.1:6379> SDIFF key1 key2   #差集
+1) "b"
+2) "a"
+127.0.0.1:6379> SINTER key1 key2  #交集   共同好友就可以这样实现
+1) "d"
+2) "c"
+127.0.0.1:6379> SUNION key1 key2  #并集
+1) "b"
+2) "c"
+3) "e"
+4) "a"
+5) "d"
+6) "f"
+127.0.0.1:6379> sadd set1 a b c d
+(integer) 4
+127.0.0.1:6379> sadd set2 c d e f
+(integer) 4
+127.0.0.1:6379> sdiffstore set3 set1 set2
+(integer) 2
+127.0.0.1:6379> smembers set3
+1) "a"
+2) "b"
+```
+
+## 4、Hash（哈希） 
+
+> Redis hash 是一个string类型的field和value的映射表，hash特别适合用于存储对象。
+>
+> Set就是一种简化的Hash,只变动key,而value使用默认值填充。可以将一个Hash表作为一个对象进行存储，表中存放对象的信息。
+
+![pic_a683fe77.png](./redis.assets/pic_a683fe77.png)
+
+Map集合 ， key-map，时候这个值是一个map集合。本质和string类型没有太大区别，还是一个简单的key-value！
+
+```bash
+####################################################
+127.0.0.1:6379> hset myhash field1 zhangsan  #set一个具体的 key-value
+(integer) 1
+127.0.0.1:6379> hget myhash field1 #获取一个字段值
+"zhangsan"
+127.0.0.1:6379> hmset myhash field1 hello field2 world #设置多个key-value
+OK
+127.0.0.1:6379> hmget myhash field1 field2 #获取多个字段值
+1) "hello"
+2) "world"
+127.0.0.1:6379> hgetall myhash #获取全部的数据
+1) "field1"
+2) "hello"
+3) "field2"
+4) "world"
+127.0.0.1:6379> hdel myhash field1 #删除hash指定key字段！ 对应的value值也就消失了
+(integer) 1
+127.0.0.1:6379> HGETALL myhash
+1) "field2"
+2) "world"
+####################################################
+hlen #获取hash表的字段数量
+127.0.0.1:6379> hmset myhash field hello field3 wufeng field4 lis 
+OK
+127.0.0.1:6379> HGETALL myhash
+1) "field2"
+2) "world"
+3) "field"
+4) "hello"
+5) "field3"
+6) "wufeng"
+7) "field4"
+8) "lis"
+127.0.0.1:6379> hget myhash field  
+"hello"
+127.0.0.1:6379> hlen myhash  #获取hash表的字段数量
+(integer) 4
+
+####################################################
+127.0.0.1:6379> HEXISTS myhash field #判断hash中指定字段是否存在
+(integer) 1
+127.0.0.1:6379> HEXISTS myhash field6
+(integer) 0
+
+####################################################
+#只获得所有filed   hkeys
+#只获得所有value   hvals
+127.0.0.1:6379> HKEYS myhash #获得所有filed
+1) "field2"
+2) "field"
+3) "field3"
+4) "field4" 
+127.0.0.1:6379> HVALS myhash  #获得所有value
+1) "world"
+2) "hello"
+3) "wufeng"
+4) "lis"
+
+####################################################
+hincrby #加1  hdecrby #减1
+127.0.0.1:6379> hset myhash field6 5  #指定增量为5
+(integer) 1
+127.0.0.1:6379> HINCRBY myhash field6 1 #数值加1
+(integer) 6
+127.0.0.1:6379> HINCRBY myhash field6 -2 #数值减2
+(integer) 3
+127.0.0.1:6379> HSETNX myhash field7 hello #如果不存在则可以设置
+(integer) 1
+127.0.0.1:6379> HSETNX myhash field6 hello #如果存在则可以设置
+(integer) 0
+```
+
+hash变更的数据 user name age ,尤其是用户信息之类的，经常变动的信息。 hash更适合于对象的存储，String更加适合字符串的存储。
+
+```java
+127.0.0.1:6379> hmset myhash user:1:name zhangsan user:1:age 30 #设置user:{id}:{field}
+OK
+127.0.0.1:6379> hmget myhash user:1:name user:1:age
+1) "zhangsan"
+2) "30"
+127.0.0.1:6379> HGETALL myhash
+1) "field7"
+2) "hello"
+3) "user:1:name"
+4) "zhangsan"
+5) "user:1:age"
+6) "30"
+```
+
+## 5、Zset（有序集合） 
+
+> 不同的是每个元素都会关联一个double类型的分数（score）。redis正是通过分数来为集合中的成员进行从小到大的排序。
+>
+> score相同：按字典顺序排序
+>
+> 有序集合的成员是唯一的,但分数(score)却可以重复。
+
+![pic_b189bade.png](./redis.assets/pic_b189bade.png)
+
+在set的基础上，增加一个值，
+
+ *  set: `k1 v1`
+ *  zset: `k1 score1 v1`
+
+```bash
+####################################################
+127.0.0.1:6379> zadd myset 1 one  #添加一个值
+(integer) 1
+127.0.0.1:6379> zadd myset 2 two 3 three #添加多个值
+(integer) 2
+127.0.0.1:6379> zrange myset 0 -1
+1) "one"
+2) "two"
+3) "three"
+
+####################################################
+排序如何实现
+
+127.0.0.1:6379> zadd salary 2500 xiaohong  #添加三个用户   薪水，名字
+(integer) 1
+127.0.0.1:6379> zadd salary 5000 zhangsan
+(integer) 1
+127.0.0.1:6379> zadd salary 1000 lisi
+(integer) 1
+127.0.0.1:6379> ZRANGEBYSCORE salary -inf +inf  #显示全部用户，按薪水从小到大排名 -inf：表示负无穷
+1) "lisi"
+2) "xiaohong"
+3) "zhangsan"
+127.0.0.1:6379> zrevrange salary 0 -1 withscores # 从大到小进行排序
+1) "zhangsan"
+2) "5000"
+3) "xiaohong"
+4) "2500"
+127.0.0.1:6379> ZRANGEBYSCORE salary -inf +inf withscores #查找所有的数据 ，withscores：带有的薪水信息
+1) "lisi"
+2) "1000"
+3) "xiaohong"
+4) "2500"
+5) "zhangsan"
+6) "5000"
+127.0.0.1:6379> ZRANGEBYSCORE salary -inf 2500 withscores #显示工资小于2500员工的升序排列
+1) "lisi"
+2) "1000"
+3) "xiaohong"
+4) "2500"
+
+####################################################
+移除：zrem
+127.0.0.1:6379> zrange salary 0 -1
+1) "lisi"
+2) "xiaohong"
+3) "zhangsan"
+127.0.0.1:6379> zrem salary lisi  #移除有序集合中的指定元素 
+(integer) 1
+127.0.0.1:6379> zrange salary 0 -1
+1) "xiaohong"
+2) "zhangsan"
+127.0.0.1:6379> zcard salary  #获取集合中的个数
+(integer) 2
+
+####################################################
+127.0.0.1:6379> zrange myset 0 -1
+1) "one"
+2) "two"
+3) "three"
+127.0.0.1:6379> zcount myset 0 2  #获取指定分数区间的成员数量
+(integer) 2
+127.0.0.1:6379> zcount myset 0 5
+(integer) 3
+
+##################################################
+127.0.0.1:6379> zrange myzset 0 -1 withscores
+1) "one"
+2) "1"
+3) "two"
+4) "2"
+5) "three"
+6) "3"
+127.0.0.1:6379> zcount myzset 0 2
+(integer) 2
+127.0.0.1:6379> zincrby myzset 2 one
+"3"
+127.0.0.1:6379> zrange myzset 0 -1 withscores
+1) "two"
+2) "2"
+3) "one"
+4) "3"
+5) "three"
+6) "3"
+127.0.0.1:6379> zscore myzset one
+"3"
+127.0.0.1:6379> zrank myset one
+(error) WRONGTYPE Operation against a key holding the wrong kind of value
+127.0.0.1:6379> zrank myzset one
+(integer) 1
+```
+
+应用案例：
+
+ *  set排序 存储班级成绩表 工资表排序！
+ *  普通消息，1.重要消息 2.带权重进行判断
+ *  排行榜应用实现，取Top N测试
+
+## 6、Geospatial(地理位置) 
+
+> 使用经纬度定位地理坐标并用一个有序集合zset保存，所以zset命令也可以使用
+
+![pic_846c6574.png](./redis.assets/pic_846c6574.png)
+
+> 有效经纬度
+
+有效的经度从-180度到180度。  
+有效的纬度从-85.05112878度到85.05112878度。
+
+> 指定单位的参数 unit 必须是以下单位的其中一个：
+
+m 表示单位为米。
+
+km 表示单位为千米。
+
+mi 表示单位为英里。
+
+ft 表示单位为英尺。
+
+> 关于GEORADIUS的参数
+
+通过georadius就可以完成 附近的人功能
+
+withcoord:带上坐标
+
+withdist:带上距离，单位与半径单位相同
+
+COUNT n : 只显示前n个(按距离递增排序)
+
+> geoadd
+
+```java
+#geoadd 添加地理位置
+# 规则： 两极无法直接添加，我们一般会下载城市数据，直接通过java程序一次性导入
+#参数  key 值(纬度、经度、名称)
+    #有效的经度从-180度到180度。
+    #有效的纬度从-85.05112878度到85.05112878度。
+    #当坐标位置超出上述指定范围时，该命令将会返回一个错误。
+127.0.0.1:6379> geoadd china:city  116.40 39.90 beijing
+(integer) 1
+127.0.0.1:6379> geoadd china:city 121.47 31.23 shanghai
+(integer) 1
+127.0.0.1:6379> geoadd china:city 106.50 29.53  chongqing
+(integer) 1
+127.0.0.1:6379> geoadd china:city 114.08 22.54   shenzhen 116.85 38.31 cangzhou
+(integer) 2
+127.0.0.1:6379> geoadd china:city 120.15 30.28  hangzhou 125.14 42.92 xian
+(integer) 2
+```
+
+> geopos
+
+```java
+获得当前定位：一定是一个坐标值。
+127.0.0.1:6379> geopos china:city beijing #获取指定的城市的经度和纬度
+1) 1) "116.39999896287918091"
+   2) "39.90000009167092543"
+127.0.0.1:6379> geopos china:city beijing cangzhou
+1) 1) "116.39999896287918091"
+   2) "39.90000009167092543"
+2) 1) "116.84999853372573853"
+   2) "38.30999992507150864"
+```
+
+> geodist
+
+两人之间的距离
+
+单位：
+
+ *  m 表示单位为米
+ *  km 表示单位为千米
+ *  mi 表示单位为英里
+ *  ft 表示单位为英尺
+
+```java
+127.0.0.1:6379> geodist china:city beijing shanghai km #查看北京到上海的直线距离
+"1067.3788"
+127.0.0.1:6379> GEODIST china:city beijing chongqing km #查看北京到重庆的直线距离
+"1464.0708"
+```
+
+> georadius 以给定的经纬度为中心，找出某一半径内的元素
+
+我附近的人？ (获得所有附近的人的地址，定位！) 通过半径来查询
+
+获得指定数量的人为200个 count 200
+
+所有数据应该都录入 china:city ，才会让结果更加清晰
+
+```java
+127.0.0.1:6379> GEORADIUS china:city 110 30 500 km #以110 30这个经度纬度为中心，寻找方圆1000km内的城市
+1) "chongqing"
+127.0.0.1:6379> GEORADIUS china:city 110 30 1000 km
+1) "chongqing"
+2) "shenzhen"
+3) "hangzhou"
+127.0.0.1:6379> GEORADIUS china:city 110 30 1000 km withdist #显示到中间距离的位置
+1) 1) "chongqing"
+   2) "341.9374"
+2) 1) "shenzhen"
+   2) "923.9364"
+3) 1) "hangzhou"
+   2) "976.4868"
+127.0.0.1:6379> GEORADIUS china:city 110 30 1000 km withdist withcoord  #显示他人的定位信息
+1) 1) "chongqing"
+   2) "341.9374"
+   3) 1) "106.49999767541885376"
+      2) "29.52999957900659211"
+2) 1) "shenzhen"
+   2) "923.9364"
+   3) 1) "114.08000081777572632"
+      2) "22.53999903789756587"
+3) 1) "hangzhou"
+   2) "976.4868"
+   3) 1) "120.15000075101852417"
+      2) "30.2800007575645509"
+127.0.0.1:6379> GEORADIUS china:city 110 30 1000 km withdist withcoord  count 1
+1) 1) "chongqing"
+   2) "341.9374"
+   3) 1) "106.49999767541885376"
+      2) "29.52999957900659211"
+127.0.0.1:6379> GEORADIUS china:city 110 30 1000 km withdist withcoord  count 2 #筛选出指定的结果！
+1) 1) "chongqing"
+   2) "341.9374"
+   3) 1) "106.49999767541885376"
+      2) "29.52999957900659211"
+2) 1) "shenzhen"
+   2) "923.9364"
+   3) 1) "114.08000081777572632"
+      2) "22.53999903789756587"
+127.0.0.1:6379> 
+
+127.0.0.1:6379> georadius china:city 110 30 1000 km withcoord withdist withhash
+1) 1) "chongqin"
+   2) "341.9374"
+   3) (integer) 4026042091628984
+   4) 1) "106.49999767541885376"
+      2) "29.52999957900659211"
+2) 1) "shenzhen"
+   2) "923.9364"
+   3) (integer) 4046432296800546
+   4) 1) "114.08000081777572632"
+      2) "22.53999903789756587"
+3) 1) "hangzhou"
+   2) "976.4868"
+   3) (integer) 4054134257390783
+   4) 1) "120.15000075101852417"
+      2) "30.2800007575645509"
+127.0.0.1:6379> georadius china:city 110 30 1000 km withcoord withdist count 2
+1) 1) "chongqin"
+   2) "341.9374"
+   3) 1) "106.49999767541885376"
+      2) "29.52999957900659211"
+2) 1) "shenzhen"
+   2) "923.9364"
+   3) 1) "114.08000081777572632"
+      2) "22.53999903789756587"
+127.0.0.1:6379> georadius china:city 110 30 1000 km withcoord withdist count 2 asc
+1) 1) "chongqin"
+   2) "341.9374"
+   3) 1) "106.49999767541885376"
+      2) "29.52999957900659211"
+2) 1) "shenzhen"
+   2) "923.9364"
+   3) 1) "114.08000081777572632"
+      2) "22.53999903789756587"
+127.0.0.1:6379> georadius china:city 110 30 1000 km withcoord withdist count 2 desc
+1) 1) "hangzhou"
+   2) "976.4868"
+   3) 1) "120.15000075101852417"
+      2) "30.2800007575645509"
+2) 1) "shenzhen"
+   2) "923.9364"
+   3) 1) "114.08000081777572632"
+      2) "22.53999903789756587"
+```
+
+> georadiusbymember
+
+```java
+#找出位于指定元素(集合中已经存在)周围的其他元素
+127.0.0.1:6379> GEORADIUSBYMEMBER china:city beijing 1000 km
+1) "cangzhou"
+2) "beijing"
+3) "xian"
+127.0.0.1:6379> GEORADIUSBYMEMBER china:city shanghai 500km
+(error) ERR wrong number of arguments for 'georadiusbymember' command
+127.0.0.1:6379> GEORADIUSBYMEMBER china:city shanghai 500 km
+1) "hangzhou"
+2) "shanghai"
+```
+
+> geohash 返回一个或多个位置元素的geohash表示（很少使用到）
+
+该命令将返回11个字符的geohash字符串
+
+```java
+#将二维的经纬度转换为一维的字符串，如果两个字符串越近，那么则距离越近。
+127.0.0.1:6379> GEOHASH china:city beijing chongqing
+1) "wx4fbxxfke0"
+2) "wm5xzrybty0"
+```
+
+> geo 底层的实现原理其实就是Zset 我们可以使用Zset命令来操作geo
+
+```java
+127.0.0.1:6379> ZRANGE china:city 0 -1  #查看地图中全部元素
+1) "chongqing"
+2) "shenzhen"
+3) "hangzhou"
+4) "shanghai"
+5) "cangzhou"
+6) "beijing"
+7) "xian"
+127.0.0.1:6379> zrem china:city beijing xian  #移除指定元素
+(integer) 2
+127.0.0.1:6379> ZRANGE china:city 0 -1
+1) "chongqing"
+2) "shenzhen"
+3) "hangzhou"
+4) "shanghai"
+5) "cangzhou"
+```
+
+## 7、Hyperloglog(基数统计) 
+
+> Redis HyperLogLog 是用来做基数统计的算法，HyperLogLog 的优点是，在输入元素的数量或者体积非常非常大时，计算基数所需的空间总是固定的、并且是很小的。
+>
+> 花费 12 KB 内存，就可以计算接近 2^64 个不同元素的基数。
+>
+> 因为 HyperLogLog 只会根据输入元素来计算基数，而不会储存输入元素本身，所以 HyperLogLog 不能像集合那样，返回输入的各个元素。
+>
+> 其底层使用string数据类型
+
+ *  什么是基数？
+   
+    数据集中不重复的元素的个数。
+    
+    即独立用户的数量，如：
+    
+    > 假设我们有一个网站，需要统计每天访问网站的独立用户数量。通常情况下，我们可以使用传统的方法，比如将每个用户的 ID 记录在一个集合中，然后使用集合的大小来统计独立用户数量。但是，当用户量非常大时，这种方法会占用大量内存空间。
+    >
+    > 这时，我们可以使用 HyperLogLog 来进行基数统计。假设有一天，我们接收到了以下用户访问网站的 ID 数据：
+    >
+    > 用户ID：\[1001, 2002, 3003, 1001, 4004, 1001, 5005, 6006, 2002\]
+    >
+    > 现在，我们使用 HyperLogLog 结构来统计这些用户的独立数量。首先，我们将每个用户 ID 进行哈希映射，得到一个哈希值，然后根据哈希值来估计基数。
+    >
+    > 经过哈希映射后，得到的哈希值可能类似于：  
+    > \[0x32, 0x18, 0x7F, 0x32, 0x45, 0x32, 0x92, 0x11, 0x18\]
+    >
+    > 接着，我们使用位操作来统计零位前导串（zero leading string）的长度。假设经过统计后，得到的零位前导串长度为：  
+    > \[5, 4, 6, 5, 3, 5, 7, 2, 4\]
+    >
+    > 最后，通过对零位前导串长度的统计结果进行分析，就能够估计出独立用户的数量。
+    
+    ![pic_b441bf6c.png](./redis.assets/pic_b441bf6c.png)
+ *  应用场景：
+   
+     *  网页的访问量（UV）：一个用户多次访问，也只能算作一个人。
+     *  传统实现，存储用户的id,然后每次进行比较。当用户变多之后这种方式及其浪费空间，而我们的目的只是计数，Hyperloglog就能帮助我们利用最小的空间完成。
+
+![pic_a74871ac.png](./redis.assets/pic_a74871ac.png)
+
+```java
+127.0.0.1:6379> PFADD mykey a b c d e f g h k  #创建第一组元素  mykey
+(integer) 1
+127.0.0.1:6379> PFCOUNT mykey #统计 mykey 元素的基数数量
+(integer) 9
+127.0.0.1:6379> PFADD mykey2 q w e r t y u i o #创建第二组元素  mykey2
+(integer) 1
+127.0.0.1:6379> PFCOUNT mykey2
+(integer) 9
+127.0.0.1:6379> PFMERGE mykey3 mykey mykey2 # 合并两组  mykey mykey2 => mykey3
+OK
+127.0.0.1:6379> PFCOUNT mykey3 #看并集的数量  相同的不计
+(integer) 16
+```
+
+如果允许容错，那么一定可以使用Hyperloglog !
+
+如果不允许容错，就使用set或者自己的数据类型即可 ！
+
+原因：
+
+> HyperLogLog 通过概率统计来估计基数是因为其设计的目的是在牺牲一定的精确度的情况下，换取更小的内存占用和更高的性能。这种牺牲精确度来换取效率的策略被称为"概率算法"。
+>
+> HyperLogLog 的近似值原理基于统计学中的概率方法，利用哈希函数将元素映射到一个固定长度的比特串中，然后根据比特串的特征来估计基数。在实际应用中，HyperLogLog 会对零位前导串（zero leading string）的长度进行统计，并根据统计结果来推测独立元素的数量。
+>
+> 由于 HyperLogLog 使用的是概率方法，因此得到的结果是一个近似值，而不是精确值。这意味着在某些情况下，可能会出现误差，但通常情况下，这种误差是可以接受的。通过牺牲一定的精确度，HyperLogLog 能够以较小的内存消耗来快速估计大型数据集合的基数，适用于需要高效处理大规模数据的场景。
+
+## 8、BitMaps(位图) 
+
+> 使用位存储，信息状态只有 0 和 1
+>
+> Bitmap是一串连续的2进制数字（0或1），每一位所在的位置为偏移(offset)，在bitmap上可执行AND,OR,XOR,NOT以及其它位操作。
+
+应用场景: 签到统计、状态统计
+
+![pic_a7ccb12c.png](./redis.assets/pic_a7ccb12c.png)
+
+统计用户信息,活跃,不活跃!登录,未登录!打卡,未打卡! 两个的状态,都可以使用bitmaps
+
+Bitmaps位图,数据结构!都是操作二进制位来进行记录,就只有0和1两个状态.
+
+365天 = 365bit 1字节 = 8bit 46个字节左右!
+
+使用bitmap来记录 周一到周日的打卡
+
+```java
+127.0.0.1:6379> setbit sign 0 1  #周一到周日打卡情况，1代表打卡  0代表未打卡
+(integer) 0
+127.0.0.1:6379> setbit sign 1 1
+(integer) 0
+127.0.0.1:6379> setbit sign 3 1
+(integer) 0
+127.0.0.1:6379> setbit sign 4 0
+(integer) 0
+127.0.0.1:6379> setbit sign 5 0
+(integer) 0
+127.0.0.1:6379> setbit sign 6 1
+(integer) 0
+
+127.0.0.1:6379> GETBIT sign 5  #查看某一天是否打卡
+(integer) 0
+127.0.0.1:6379> GETBIT sign 6
+(integer) 1
+
+127.0.0.1:6379> bitcount sign #统计这周的打卡记录
+(integer) 4
+```
+
+bitmaps是一串从左到右的二进制串
 
 
 
