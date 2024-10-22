@@ -10,6 +10,7 @@ public class MyQueue {
 
         // 添加元素到队列
         queue.add("Apple");
+        queue.offer("apple_offer");
         queue.add("Banana");
         queue.add("Orange");
 

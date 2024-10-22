@@ -1,32 +1,40 @@
 package com.yang.dataStructure;
 
-class Solution {
-    public int reverse(int x) {
+import java.util.*;
 
-        boolean c = x >= 0 ? true : false;
-        //记录下来x的正负，并把x转为正数
-        if(!c) {
-            x *= -1;
-        }
-        String s = Integer.toString(x);
+class Solution {
+    public int maxArea(int[] height) {
         int res = 0;
-        for(int i = s.length() - 1; i >= 0; i--) {
-            res += (s.charAt(i) - '0') * Math.pow(10, i);
-            if(res >= Integer.MAX_VALUE){
-                return 0;
+        int len = height.length;
+        if(len < 2) {
+            return res;
+        }
+
+        for(int l = 0, r = len - 1; l < r;) {
+            int area = (r - l) * Math.min(height[l], height[r]);
+            res = area > res ? area : res;
+            if(height[l] < height[r]) {
+                l++;
+            }else {
+                r--;
             }
         }
-        if(c) {
-            return res;
-        } else {
-            return res * -1;
-        }
+        return res;
     }
 }
 public class MyTest {
 
     public static void main(String[] args) {
 
-        System.out.println(new Solution().reverse(1534236469));
+        List<Integer> list = new ArrayList<>();
+        list.add(1);
+        list.add(2);
+        list.add(3);
+        Collections.reverse(list);
+        for (Integer i : list) {
+            System.out.println(i);
+        }
+
+
     }
 }
