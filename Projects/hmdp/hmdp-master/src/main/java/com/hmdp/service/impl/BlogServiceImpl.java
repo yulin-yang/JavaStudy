@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
  * @author 虎哥
  * @since 2021-12-22
  */
-@Service
+@Service1
 public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IBlogService {
     @Resource
     private IUserService userService;
