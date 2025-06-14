@@ -555,6 +555,8 @@ public class DirectMemoryDemo {
 
 #### NIO数据拷贝流程 
 
+NIO（Non-blocking I/O，非阻塞输入/输出）
+
 Nio在内存中划分出了一块直接内存。这份直接内存可以由java代码直接访问，系统也可以访问到
 
 ![pic_d4e74905.png](./JVM.assets/pic_d4e74905.png)
