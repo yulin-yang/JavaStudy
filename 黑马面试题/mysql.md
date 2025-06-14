@@ -432,11 +432,11 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
     匹配最左前缀法则, 走索引:
 
-    ![pic_9c3d6db0.png](https://mark.cuckooing.cn/pics/pic_9c3d6db0.png)
+    ![image-20240906094353968](./mysql.assets/ef7f50b56061b6c526a629c38edb1048.png)
 
     违反最左前缀法则, **索引失效**:
 
-    ![pic_df61f368.png](https://mark.cuckooing.cn/pics/pic_df61f368.png)
+    ![image-20240906094509831](./mysql.assets/e50f495a7e5b20596df1d14807b2dbc5.png)
 
     如果符合最左前缀法则, 但是出现跳跃某一列, 只有最左列索引生效:
 
@@ -454,17 +454,17 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
 3. 不要在索引列上进行运算操作, 索引会失效
 
-    ![pic_3f3db941.png](https://mark.cuckooing.cn/pics/pic_3f3db941.png)
+    ![image-20240906095040236](./mysql.assets/99d694cf8532084e6e2995803f672783.png)
 
 4. 字符串不加单引号, 造成索引失效
 
-    ![pic_cd2082c2.png](https://mark.cuckooing.cn/pics/pic_cd2082c2.png)
+    ![image-20240906095234493](./mysql.assets/b5f313fc605ba856a0544a20bcd226cf.png)
 
     由于, 在查询时, 没有对字符串加单引号, MySQL的查询优化器, 会自动的进行类型转换, 造成索引失效
 
 5. 以`%`开头的`Like`模糊查询, 索引失效. 如果仅仅是尾部模糊匹配, 索引不会失效. 如果是头部模糊匹配, 索引失效.
 
-    ![pic_30152e36.png](https://mark.cuckooing.cn/pics/pic_30152e36.png)
+    ![image-20240906095722993](./mysql.assets/794433bcd5c38678e64a02dc6b176d4d.png)
 
 ##### 面试官: 什么情况下索引会失效? 
 
@@ -505,7 +505,7 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
 如果数据库的使用场景读的操作比较多的时候, 为了避免写的操作所造成的性能影响, 可以采用读写分离的架构. 读写分离解决的是, 数据库的写入, 影响了查询的效率.
 
-![pic_29b8999e.png](https://mark.cuckooing.cn/pics/pic_29b8999e.png)
+![image-20240906101439201](./mysql.assets/80ed6c1e884b70e8d7f6615788acd2e5.png)
 
 ##### 面试官: 谈一谈你对SQL优化的经验 
 
@@ -517,7 +517,7 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
 ## 其他面试题 
 
-![pic_e7f2ab9f.png](https://mark.cuckooing.cn/pics/pic_e7f2ab9f.png)
+![image-20240906101830593](./mysql.assets/4755688372ce75ed45a98e31ee891084.png)
 
 ## 事务 
 
@@ -574,7 +574,7 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 >
 > - 如果此时 **事务 A** 由于某种原因**回滚**，数据库恢复到事务 A 执行前的状态，余额依旧是 `500`，但 **事务 B** 已经读取到了 `100` 这个错误的数值。
 
-![pic_7dda06de.png](https://mark.cuckooing.cn/pics/pic_7dda06de.png)
+![image-20240906103202658](./mysql.assets/323dbba5cb3536fbf5cb7d672d024764.png)
 
 <table> 
  <thead> 
@@ -591,7 +591,7 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
  </tbody> 
 </table>
 
-![pic_7f4db506.png](https://mark.cuckooing.cn/pics/pic_7f4db506.png)
+![image-20240906103508797](./mysql.assets/f90f0b6565e78ff7f6e0cce34e2a639c.png)
 
 <table> 
  <thead> 
@@ -608,7 +608,7 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
  </tbody> 
 </table>
 
-![pic_f592dcd5.png](https://mark.cuckooing.cn/pics/pic_f592dcd5.png)
+![image-20240906103753866](./mysql.assets/cc13ea2fc1e6f0d0f26c1d75f2911f01.png)
 
 ##### 解决并发事务问题 
 
@@ -676,23 +676,29 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 我们先介绍两个概念：
 
  *  **缓冲池(buffer pool)：** 主内存中的一个区域, 里面可以缓存磁盘上经常操作的真实数据, 在执行增删改查操作时, 先操作缓冲池中的数据(若缓冲池没有数据, 则从磁盘加载并缓存), 以一定频率刷新到磁盘, 从而减少磁盘IO, 加快处理速度
- *  **数据页(page)：**是InnoDB存储引擎磁盘管理的最小单元, 每个页的大小默认为16KB，页中存储的是行数据
+ *  **数据页(page)：**是InnoDB存储引擎磁盘管理的最小单元，存储在磁盘中。 每个页的大小默认为16KB，页中存储的是行数据
 
-> 当执行sql操作的时候，例如`update`和`delete`，会先去缓冲池中查看是否有需要的数据，没有的话从磁盘加载中加载到缓冲池中，把某一页的数据加载到内存。此时我们直接操作内存，所以效率很高。随后以一定频率刷新到磁盘, 从而减少磁盘IO, 加快处理速度
+> 当执行sql操作的时候，例如`update`和`delete`，并不会直接去操作磁盘，而是会先去操作内存，去内存中的缓冲池查看是否有需要的数据，没有的话从磁盘加载中加载到缓冲池中，把某一页的数据加载到内存。此时我们直接操作内存，所以效率很高。操作完内存后会将内存数据以一定频率刷新到磁盘, 从而减少磁盘IO, 加快处理速度
 >
-> 假如我们操作完内存，准备写入磁盘的时候内存宕机了，无法把内存写入到磁盘，这就导致我们明明修改了文件但却没有实现持久化
+> 但是有一种问题，假如我们操作完内存，准备写入磁盘的时候内存宕机了，无法把内存写入到磁盘，导致内存数据丢失，这就导致我们明明修改了文件但却没有实现持久化
 
-![pic_1f52a915.png](https://mark.cuckooing.cn/pics/pic_1f52a915.png)
+![image-20240906111004172](./mysql.assets/725beb1489b65e392a6ce59663eb976a.png)
 
 ##### `redo log` 
 
 重做日志, 记录的是事务提交时数据页的物理修改, 是用来实现事务的持久性.
 
-该日志文件由两部分组成: 重做日志缓冲(`redo log buffer`)以及重做日志文件(`redo log file`), 前者是在内存中, 后者在磁盘中. 当事务提交之后会把所有修改信息都存到该日志文件中, 用于在刷新脏页到磁盘, 发生错误时, 进行数据恢复使用
+该日志文件由两部分组成: 重做日志缓冲(`redo log buffer`)以及重做日志文件(`redo log file`), 前者是在内存中, 后者在磁盘中. `Redolog buffer`中记录着数据页的变化，并把这些变化同步到磁盘中，也就是`redo log file`中，假如服务器宕机了就从`redo log file`中读取文件。如果`buffer pool`能够正常写入到磁盘文件的话，就不需要用到`redo log file`了，每隔一段时间就会进行数据的清理。
+
+> 为什么不直接把`Buffer pool`的数据同步到磁盘中，需要另外用一个 `Redolog buffer`？
+>
+> 
+>
+> 
 
 如果内存池中的文件可以正常写入磁盘的话，就不需要用到`redo log`了
 
-![pic_cd1433d3.png](https://mark.cuckooing.cn/pics/pic_cd1433d3.png)
+![image-20240906111517861](./mysql.assets/48160a0a88260b818d6923dbdd18fc18.png)
 
 ##### `undo log` 
 
@@ -701,7 +707,7 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
  *  可以认为当`delete`一条记录时, `undo log`中会记录一条对应的`insert`记录, 反之亦然
  *  当`update`一条记录时, 它记录一条对应相反的`update`记录, 当执行`rollback`时, 就可以从`undo log`中的逻辑记录读取到相应的内容并进行回滚.
 
-`undo log`可以实现事务的一致性和原子性
+`undo log`可以实现事务的**一致性**和**原子性**
 
 ##### 面试官: `undo log`和`redo log`的区别 
 
@@ -894,8 +900,7 @@ MVCC是MySQL中的多版本并发控制. 指维护一个数据的多个版本, �
     2.  `roll_pointer`(回滚指针), 指向上一个版本的事务版本记录地址
     3.  `row_id`: 没有设置主键索引时才会用到该字段, 意义不大
  *  `undo log`:
-   
-    1.  回滚日志: 存储老版本数据
+   1.  回滚日志: 存储老版本数据
     2.  版本链: 多个事务并行操作某一行记录, 记录不同事务修改数据的版本, 通过`roll_pointer`指针形成一个链表
  *  `ReadView`解决的是一个事务查询选择版本的问题
    *  根据ReadView的匹配规则和当前的一些事务id判断该访问哪个版本的数据
@@ -912,13 +917,13 @@ MVCC是MySQL中的多版本并发控制. 指维护一个数据的多个版本, �
 
 > 一般情况下，我们都会选择一主多从，也就是一台主数据库负责写，其他的从数据库负责读。主库和从库之间会进行数据同步，以保证从库中数据的准确性。这样的架构实现起来比较简单，并且也符合系统的写少读多的特点。
 
-![pic_eb286d96.png](https://mark.cuckooing.cn/pics/pic_eb286d96.png)
+![image-20240906131041103](./mysql.assets/d420358a5e4695139125571673e0790d.png)
 
 MySQL主从复制的核心就是二进制日志
 
 > 二进制日志(BINLOG)记录了所有的`DDL`(数据定义语言)语句和`DML`(数据操纵语言)语句, 但不包括数据查询(`SELECT`、`SHOW`)语句
 
-![pic_99da3bbc.png](https://mark.cuckooing.cn/pics/pic_99da3bbc.png)
+![image-20240906131801117](./mysql.assets/c40df25e9a727d0ecbf9482fbd9f5f1f.png)
 
 复制分成三步:
 
@@ -940,7 +945,7 @@ MySQL主从复制的核心就是二进制日志`binlog`(`DDL`(数据定义语言
 
 换言之，**我们该如何解决 MySQL 的存储压力呢？**答案之一就是 **分库分表**。
 
-![pic_a785eb22.png](https://mark.cuckooing.cn/pics/pic_a785eb22.png)
+![image-20240906132437212](./mysql.assets/7174f8eb4e6240a0bcb1f3aedb323d67.png)
 
 **分库分表的时机:**
 
@@ -950,11 +955,11 @@ MySQL主从复制的核心就是二进制日志`binlog`(`DDL`(数据定义语言
     - IO瓶颈(磁盘IO、网络IO)
     - CPU瓶颈(聚合查询、连接数太多)
 
-![pic_b555f6ef.png](https://mark.cuckooing.cn/pics/pic_b555f6ef.png)
+![image-20240906132833541](./mysql.assets/d6dc5464517e25260f1c38756d628ba5.png)
 
 ##### 拆分策略 
 
-![pic_ef99604b.png](https://mark.cuckooing.cn/pics/pic_ef99604b.png)
+![image-20240906132935690](./mysql.assets/ad432ea7734812ad3831526d25e4935c.png)
 
 ##### 垂直分库 
 
@@ -963,7 +968,7 @@ MySQL主从复制的核心就是二进制日志`binlog`(`DDL`(数据定义语言
 - 按业务对数据分级管理、维护、监控、扩展
 - 在高并发下, 提高磁盘IO和数据量连接数
 
-![pic_4bd73d62.png](https://mark.cuckooing.cn/pics/pic_4bd73d62.png)
+![image-20240906133248197](./mysql.assets/13fed5679e7a60eaa307ab96140a89c7.png)
 
 ##### 垂直分表 
 
@@ -982,7 +987,7 @@ MySQL主从复制的核心就是二进制日志`binlog`(`DDL`(数据定义语言
 
 > 在实际开发中也可能是在同一个数据库下分表
 
-![pic_8db62e16.png](https://mark.cuckooing.cn/pics/pic_8db62e16.png)
+![image-20240906133346805](./mysql.assets/463b399e5ad2921c1a8924b153f97308.png)
 
 ##### 水平分库 
 
@@ -1012,13 +1017,13 @@ MySQL主从复制的核心就是二进制日志`binlog`(`DDL`(数据定义语言
 - 优化单一表数据量过大而产生的性能问题;
 - 避免IO争抢并减少锁表的几率
 
-![pic_abe2c9d9.png](https://mark.cuckooing.cn/pics/pic_abe2c9d9.png)
+![image-20240906134519385](./mysql.assets/405f02bd53b444f8d8303216af532383.png)
 
 ##### 新的问题和新的技术 
 
 ![pic_284ad472.png](https://mark.cuckooing.cn/pics/pic_284ad472.png)
 
-![pic_7517d9e1.png](https://mark.cuckooing.cn/pics/pic_7517d9e1.png)
+![image-20240906134746808](./mysql.assets/810a48e0b44592a001cb2a9383fb5915.png)
 
 分库之后的问题:
 
@@ -1063,77 +1068,6 @@ MySQL主从复制的核心就是二进制日志`binlog`(`DDL`(数据定义语言
 > - 当 MySQL 重新启动时，InnoDB 会自动执行崩溃恢复：
 >   - 利用 **redo log** 重做已经提交但尚未写入磁盘的事务。
 >   - 利用 **undo log** 回滚未提交的事务，确保数据库的一致性。
-
-
-
-### 介绍一下mysql三种日志
-
-> MySQL 中的三种主要日志分别是 **错误日志（Error Log）**、**查询日志（General Log）** 和 **二进制日志（Binary Log, binlog）**。它们记录不同类型的信息，用于故障排查、调试和数据恢复等工作。
->
-> #### 1. 错误日志（Error Log）
-> **功能**：
->
-> - 记录 MySQL 服务器启动、运行过程中发生的错误、警告和重大事件。
-> - 包括 MySQL 启动和停止信息、崩溃信息、文件系统错误、表损坏等问题。
->
-> **用途**：
->
-> - 用于排查数据库服务器的启动问题、运行时的错误和宕机等情况。
-> - 在崩溃恢复或数据库无法正常启动时，错误日志是最重要的参考信息。
->
-> **日志内容**：
-> - 启动与关闭消息
-> - 错误和警告信息
-> - 崩溃报告
->
-> **配置**：
-> - 可以通过 `log_error` 参数来指定错误日志的文件路径。
->
-> #### 2. 查询日志（General Log）
-> **功能**：
->
-> - 记录所有客户端发送给 MySQL 服务器的查询请求和连接信息，无论查询是否执行成功。
->
-> **用途**：
->
-> - 用于调试和监控，帮助开发者了解哪些 SQL 查询正在执行，或者查看客户端的连接情况。
-> - 在排查问题时，尤其是执行慢查询、异常查询时，可以通过查询日志来追踪问题来源。
->
-> **日志内容**：
-> - 客户端连接、断开连接的详细信息
-> - 每个 SQL 查询请求（SELECT、INSERT、UPDATE、DELETE 等）
->
-> **配置**：
->
-> - 通过 `general_log` 选项启用或禁用。
-> - `general_log_file` 指定日志文件路径。该日志较为详细，可能会影响性能，通常在调试时临时启用。
->
-> #### 3. 二进制日志（Binary Log, binlog）
-> **功能**：
-> - 记录所有修改数据库内容的事件，包括 `INSERT`、`UPDATE`、`DELETE` 等数据更改操作，以及表结构修改操作（如 `CREATE TABLE`、`DROP TABLE` 等）。它还记录提交的事务。
-> - 不记录 SELECT 查询。
->
-> **用途**：
-> - **数据恢复**：通过 binlog，可以恢复崩溃后丢失的数据。可以通过备份 + binlog 的方式进行灾难恢复，恢复到某个特定的时间点或事务。
-> - **主从复制**：在 MySQL 主从复制环境中，主服务器的 binlog 用于同步到从服务器。通过 binlog，从服务器可以重放主服务器的变更操作。
->
-> **日志内容**：
-> - 事务开始、提交的记录
-> - 数据更改的 SQL 操作
->
-> **配置**：
-> - 通过 `log_bin` 选项启用或禁用。
-> - `binlog_format` 配置二进制日志的格式，可以是 `STATEMENT`（基于 SQL 语句）、`ROW`（基于行的变化）、`MIXED`（混合模式）。
->
-> #### 三种日志的对比：
->
-> | 日志类型   | 功能说明                               | 典型用途                 |
-> | ---------- | -------------------------------------- | ------------------------ |
-> | 错误日志   | 记录错误、警告、MySQL 启动停止信息等   | 故障排查、崩溃恢复       |
-> | 查询日志   | 记录所有 SQL 查询和连接信息            | 调试、监控客户端查询行为 |
-> | 二进制日志 | 记录所有修改数据库内容的操作及事务提交 | 数据恢复、主从复制       |
->
-> 每种日志都有特定的用途和配置，合理利用这些日志可以帮助提高 MySQL 数据库的稳定性和安全性。
 
 ### 为什么千万级别的数据b+树只需要三到四层？ 
 

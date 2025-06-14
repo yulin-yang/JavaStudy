@@ -89,7 +89,22 @@
 
 **解决方案一： 互斥锁**
 
+`Setnx`实现互斥锁 set if not exits
+
 ![pic_b30304a3.png](Redis.assets/pic_b30304a3.png)
+
+> 首先，当一个 key 失效，不管是时间过期，还是被 LRU、LFU 剔除，
+> 假设会有 1w 个并发来访问这个 key，那么它们就会先查询 redis，然后都发现，这个 key 不存在；
+> 然后，它们就会对应的，往 redis 用 setnx 设置一个 key，来表示这是一把锁；
+> 然后，只有一个线程，会设置成功，然后去读取数据库，写回 redis；
+> 其他的 9999 个线程，则 sleep 一小会，然后再去访问我们的 redis。
+> 有人看到这，首先会问，这个 sleep 要多久？
+> 这个是要根据压测，以及线上环境进行调整的，一般会给出一个合适的值，也就是大约从数据库取出数据的时间。
+> 所以，正常情况是不会出现大面积长时间等待的情况的。
+>
+> ![img](./Redis.assets/dd1ed45e80c50ac5e8555def46a44941.png)
+
+
 
 强一致、性能差
 
@@ -98,10 +113,6 @@
 ![pic_9cd1aae0.png](Redis.assets/pic_9cd1aae0.png)
 
 高可用、性能优、但是不能保证数据绝对一致
-
-
-
-![image-20240922152713938](assets/image-20240922152713938.png)
 
 ### 缓存雪崩 
 
@@ -496,7 +507,7 @@ Redis对数据设置数据的有效时间, 数据过期以后, 就需要将数�
 
 Redis支持8种不同策略来选择要删除的key:
 
- *  `noeviction`: 不淘汰任何key, 但是内存满时不允许写入新数据, 默认就是这种策略
+ *  `noeviction（默认）`: 不淘汰任何key, 但是内存满时不允许写入新数据
  *  `volatile-ttl`: 对设置了TTL的key, 比较key的剩余TTL值, TTL越小越先被淘汰
  *  `allkeys-random`: 对全体key, 随机进行淘汰
  *  `volatile-random`: 对设置了TTL的key, 随机进行淘汰.
@@ -887,7 +898,7 @@ Linux系统为了提高IO效率, 会在用户空间和内核空间都加入缓�
 
 可以看到, 阻塞IO模型中, 用户进程在两个阶段都是阻塞状态
 
-![pic_1e889ed3.png](https://mark.cuckooing.cn/pics/pic_1e889ed3.png)
+![image-20240905121032257](./Redis.assets/8c7858ad034e575dac8d0fd12ba6fd8c.png)
 
 ##### 非阻塞IO 
 
@@ -909,7 +920,7 @@ Linux系统为了提高IO效率, 会在用户空间和内核空间都加入缓�
 
 可以看到, 非阻塞IO模型中, 用户进程在第一个阶段是非阻塞, 第二个阶段是阻塞状态. 虽然是非阻塞, 但性能并没有得到提高. 而且忙等机制（不断尝试获取数据）会导致CPU空转, CPU使用率暴增.
 
-![pic_0b1551dc.png](https://mark.cuckooing.cn/pics/pic_0b1551dc.png)
+![image-20240905121251008](./Redis.assets/9df35aee453f2a95a64bc0d7e8eb048b.png)
 
 ##### IO多路复用 
 
@@ -950,7 +961,7 @@ Redis通过IO多路复用来提高网络性能, 并且支持各种不同的多�
 
 在Redis6.0版本之后加入了多线程模式
 
-![pic_7fb12bd5.png](https://mark.cuckooing.cn/pics/pic_7fb12bd5.png)
+![image-20240905123257518](./Redis.assets/b4ffd4adabd6b65637225d7839065dca.png)
 
 #### 面试官: 能解释一下I/O多路复用模型吗? 
 
