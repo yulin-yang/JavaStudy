@@ -22,11 +22,15 @@ RabbitMQ使用场景:
 
 RabbitMQ提供了`publisher confirm`机制来避免消息发送到MQ过程中丢失. 消息发送到MQ以后, 会返回一个结果给发送者, 表示消息是否处理成功
 
+> 此时如果是发送到交换机失败会返回`nack publish-confirm`
+>
+> 如果是从交换机发送到队列失败会返回`ack publish-return`
+
 ![pic_c66ab5c5.png](./中间件MQ.assets/pic_c66ab5c5.png)
 
 消息失败之后如何处理呢?
 
- *  aasdfd回调方法及时重发
+ *  回调方法及时重发
  *  记录日志
  *  保存到数据库然后定时重发, 成功发送后即刻删除表中的数据
 
@@ -34,7 +38,7 @@ RabbitMQ提供了`publisher confirm`机制来避免消息发送到MQ过程中丢
 
 MQ默认是内存存储消息, 开启持久化功能可以确保缓存在MQ中的消息不丢失
 
-1.  交换机持久化:
+1.  **交换机**持久化:
   
     ```java
     @Bean
@@ -43,7 +47,7 @@ MQ默认是内存存储消息, 开启持久化功能可以确保缓存在MQ中�
         return new DirectExchange("simple.direct", true, false);
     }
     ```
-2.  队列持久化:
+2.  **队列**持久化:
   
     ```java
     @Bean
@@ -52,7 +56,7 @@ MQ默认是内存存储消息, 开启持久化功能可以确保缓存在MQ中�
         return QueueBuilder.durable("simple.queue").build();
     }
     ```
-3.  消息持久化, SpringAMQP中的消息默认是持久的, 可以通过`MessageProperties`中的`DeliveryMode`来指定
+3.  **消息**持久化, SpringAMQP中的消息默认是持久的, 可以通过`MessageProperties`中的`DeliveryMode`来指定
   
     ```java
     Message msg = MessageBuilder
@@ -70,6 +74,8 @@ RabbitMQ支持消费者确认机制, 即: 消费者处理消息后可以向MQ发
  *  `none`: 关闭`ack`, MQ假定消费者获取消息后会成功处理, 因此消息投递后立即被删除
 
 ![pic_5c0174f2.png](./中间件MQ.assets/pic_5c0174f2.png)
+
+我们一般选择第二种`auto`机制。但加入消费者接收消息失败了怎么办？
 
 我们可以利用Spring的`retry`机制, 在消费者出现异常时利用本地重试, 设置重试次数, 当次数达到了以后, 如果消息依然失败, 将消息投递到异常交换机, 交由人工处理
 
@@ -105,6 +111,9 @@ RabbitMQ支持消费者确认机制, 即: 消费者处理消息后可以向MQ发
 
  *  延迟队列: 进入队列的消息会被延迟消费的队列
  *  场景: 超时订单、限时优惠、定时发布
+    *  12306的超时订单
+    *  ![image-20250621175838370](./中间件MQ.assets/image-20250621175838370.png)
+
 
 延迟队列 = 死信交换机 + TTL(生存时间)
 
@@ -128,6 +137,7 @@ TTL, 也就是Time-To-Live. 如果一个队列中的消息TTL结束仍未消费,
 
  *  消息所在的队列设置了存活时间
  *  消息本身设置了存活时间
+ *  如果同时设置了以上两个TTL，则哪个时间更短就根据哪个来
 
 ![pic_48bb796a.png](./中间件MQ.assets/pic_48bb796a.png)
 
@@ -219,9 +229,11 @@ DelayExchange的本质还是官方的三种交换机, 只是添加了延迟功�
    
     ![pic_a3d95a92.png](./中间件MQ.assets/pic_a3d95a92.png)
 
+> 例如我们现在有一个消费者需要消费`test.queue1`中的消息，但是他找的是第三个节点，但因为节点3中有`test.queue1`的引用，所以会传递到`test.queue1`中拿消息
+
 #### 镜像集群 
 
-镜像集群: 本质是主从模式, 具备下面的特征:
+镜像集群: 本质是**主从模式,** 具备下面的特征:
 
  *  交换机、队列、队列中的消息会在各个MQ的镜像节点之间同步备份.
  *  创建队列的节点被称为该队列的主节点, 备份到其他节点叫做该队列的镜像节点.

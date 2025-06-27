@@ -1,0 +1,9 @@
+hm:
+  db:
+    host: 121.37.172.251 # 修改为你自己的虚拟机IP地址
+    pw: root # 修改为docker中的MySQL密码
+spring:
+  rabbitmq:
+    host: 121.37.172.251
+    username: itheima
+    password: 123321
