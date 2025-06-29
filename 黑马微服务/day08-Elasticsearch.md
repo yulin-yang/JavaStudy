@@ -1360,7 +1360,7 @@ public class IndexTest {
     @BeforeEach
     void setUp() {
         this.client = new RestHighLevelClient(RestClient.builder(
-                HttpHost.create("http://192.168.150.101:9200")
+                HttpHost.create("http://121.37.172.251:9200")
         ));
     }
 
@@ -1490,18 +1490,14 @@ PUT /items
 代码分为三步：
 
 * 1）创建Request对象。
-
   * 因为是创建索引库的操作，因此Request是`CreateIndexRequest`。
-
+  
 * 2）添加请求参数
-
   * 其实就是Json格式的Mapping映射参数。因为json字符串很长，这里是定义了静态字符串常量`MAPPING_TEMPLATE`，让代码看起来更加优雅。
-
+  
 * 3）发送请求
 
   * `client.indices()`方法的返回值是`IndicesClient`类型，封装了所有与索引库操作有关的方法。例如创建索引、删除索引、判断索引是否存在等
-
-
 
 在`item-service`中的`IndexTest`测试类中，具体代码如下：
 
@@ -1559,8 +1555,6 @@ static final String MAPPING_TEMPLATE = "{\n" +
             "}";
 ```
 
-
-
 ## 4.2.删除索引库
 
 删除索引库的请求非常简单：
@@ -1611,8 +1605,6 @@ void testDeleteIndex() throws IOException {
 GET /hotel
 ```
 
-
-
 因此与删除的Java代码流程是类似的，流程如下：
 
 * 1）创建Request对象。这次是GetIndexRequest对象
@@ -1633,9 +1625,9 @@ void testExistsIndex() throws IOException {
 }
 ```
 
-
-
 ## 4.4.总结
+
+![image-20250628111352957](./day08-Elasticsearch.assets/image-20250628111352957.png)
 
 JavaRestClient操作elasticsearch的流程基本类似。核心是`client.indices()`方法来获取索引库的操作对象。
 
@@ -1648,8 +1640,6 @@ JavaRestClient操作elasticsearch的流程基本类似。核心是`client.indice
 * 准备请求参数（ `Create`时需要，其它是无参，可以省略）
 
 * 发送请求。调用`RestHighLevelClient#indices().xxx()`方法，xxx是`create`、`exists`、`delete`
-
-
 
 # 5.RestClient操作文档
 
@@ -1777,11 +1767,7 @@ POST /{索引库名}/_doc/1
 
 * 3）发送请求
 
-
-
 变化的地方在于，这里直接使用`client.xxx()`的API，不再需要`client.indices()`了。
-
-
 
 ### 5.1.3.完整代码
 
@@ -1792,8 +1778,6 @@ POST /{索引库名}/_doc/1
 * `Item`对象需要转为`ItemDoc`对象
 
 * `ItemDTO`需要序列化为`json`格式
-
-
 
 因此，代码整体步骤如下：
 
@@ -1809,30 +1793,31 @@ POST /{索引库名}/_doc/1
 
 * 6）发送请求
 
-
-
 在`item-service`的`DocumentTest`测试类中，编写单元测试：
 
 ```java
-@Test
-void testAddDocument() throws IOException {
-    // 1.根据id查询商品数据
-    Item item = itemService.getById(100002644680L);
-    // 2.转换为文档类型
-    ItemDoc itemDoc = BeanUtil.copyProperties(item, ItemDoc.class);
-    // 3.将ItemDTO转json
-    String doc = JSONUtil.toJsonStr(itemDoc);
+@SpringBootTest(properties = "spring.profiles.active=local")
+public class ElasticDocumentTest {
 
-    // 1.准备Request对象
-    IndexRequest request = new IndexRequest("items").id(itemDoc.getId());
-    // 2.准备Json文档
-    request.source(doc, XContentType.JSON);
-    // 3.发送请求
-    client.index(request, RequestOptions.DEFAULT);
+    @Test
+    void testIndexDoc() throws IOException {
+        // 1.根据id查询商品数据
+        Item item = itemService.getById(100002644680L);
+        // 2.转换为文档类型
+        //调用了 Hutool 工具包中的 BeanUtil.copyProperties 方法，用来将一个对象的属性快速复制到另一个对象中。
+        ItemDoc itemDoc = BeanUtil.copyProperties(item, ItemDoc.class);
+        // 3.将ItemDTO转json
+        String doc = JSONUtil.toJsonStr(itemDoc);
+
+        // 1.准备Request对象
+        IndexRequest request = new IndexRequest("items").id(itemDoc.getId());
+        // 2.准备Json文档
+        request.source(doc, XContentType.JSON);
+        // 3.发送请求
+        client.index(request, RequestOptions.DEFAULT);
+    }
 }
 ```
-
-
 
 ## 5.2.查询文档
 
