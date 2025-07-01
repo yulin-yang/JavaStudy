@@ -1,0 +1,207 @@
+{
+  "main": {
+    "id": "0f1dab9d3718cfb4",
+    "type": "split",
+    "children": [
+      {
+        "id": "95294ef60d850c19",
+        "type": "tabs",
+        "dimension": 21.27831715210356,
+        "children": [
+          {
+            "id": "df236375b46b8a49",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "黑马微服务/day08-Elasticsearch.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "day08-Elasticsearch 的大纲"
+            }
+          }
+        ]
+      },
+      {
+        "id": "12c09c472b217428",
+        "type": "tabs",
+        "dimension": 78.72168284789643,
+        "children": [
+          {
+            "id": "c405b0397f4a32b6",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "黑马微服务/day08-Elasticsearch.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "day08-Elasticsearch"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "1efeb89ab0e1f78c",
+    "type": "split",
+    "children": [
+      {
+        "id": "ebb6a57f10b12ea0",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "db3faef6d6c21b1f",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "文件列表"
+            }
+          },
+          {
+            "id": "6847adf73e4eea48",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "搜索"
+            }
+          },
+          {
+            "id": "1db981f856d2348c",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "书签"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "right": {
+    "id": "8e6ecb8b91fc4639",
+    "type": "split",
+    "children": [
+      {
+        "id": "fb7ad69876d7dc94",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6b83814ac7a496b9",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "黑马微服务/day08-Elasticsearch.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "day08-Elasticsearch 的反向链接列表"
+            }
+          },
+          {
+            "id": "cfb213a1c2e3b703",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "黑马微服务/day08-Elasticsearch.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "day08-Elasticsearch 的出链列表"
+            }
+          },
+          {
+            "id": "363d93464f97e78e",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "标签"
+            }
+          }
+        ],
+        "currentTab": 2
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "switcher:打开快速切换": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false
+    }
+  },
+  "active": "c405b0397f4a32b6",
+  "lastOpenFiles": [
+    "黑马微服务/day07-MQ高级.md",
+    "黑马微服务/day04-微服务02.md",
+    "黑马微服务/day08-Elasticsearch.md",
+    "黑马微服务/day10-Redis面试篇.md",
+    "黑马微服务/day10-Redis面试篇.assets/Zu2abxxRToVn2ZxfNA1cZpW9nhe.png",
+    "黑马微服务/day10-Redis面试篇.assets/ZTsvbkU7WoZE54xlFUyc6hHknhc.png",
+    "黑马微服务/day10-Redis面试篇.assets/ZTQHbI4TYo4djvx1Qoxc9fWynZf.png",
+    "黑马微服务/day10-Redis面试篇.assets/ZGRzbUQeNoLaUsxX0fBcQXEpnig.png",
+    "黑马微服务/day10-Redis面试篇.assets/Z1NPbyRDwo6c5bxpDQAcYLfXnGb.png",
+    "黑马微服务/day10-Redis面试篇.assets/YwlibWA2Boy9pxxFVlBc0z6xnDh.png",
+    "黑马微服务/day10-Redis面试篇.assets/XttMbSYb5ocTjaxqI5scZK3wnQe.jpg",
+    "黑马微服务/day10-Redis面试篇.assets/X6rXbmoJyoXjJuxNyICckYzenab.png",
+    "黑马微服务/day10-Redis面试篇.assets/Wwf9bDuq5os6XMx7seKc2Wntnae.png",
+    "黑马微服务/day10-Redis面试篇.assets/Wkg7bVQpCoD974xVno1cOVvcneb.png",
+    "黑马微服务/day10-Redis面试篇.assets",
+    "2025-06-25.md",
+    "黑马微服务/day06-MQ基础.md",
+    "苍穹外卖/苍穹外卖.md",
+    "苍穹外卖/{{filename}}.assets",
+    "未命名.md",
+    "未命名.canvas",
+    "黑马点评/Redis高级-分布式缓存.md",
+    "黑马点评/原理篇.md",
+    "黑马点评/黑马点评.md"
+  ]
+}

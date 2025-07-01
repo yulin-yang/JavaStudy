@@ -1,0 +1,15 @@
+server:
+  port: 8085
+spring:
+  rabbitmq:
+    host: ${spring.rabbitmq.host} # 你的虚拟机IP
+    port: 5672 # 端口
+    virtual-host: / # 虚拟主机
+    username: ${spring.rabbitmq.username} # 用户名
+    password: ${spring.rabbitmq.password} # 密码
+hm:
+  swagger:
+    title: "黑马商城订单服务接口文档"
+    package: com.hmall.item.controller
+  db:
+    database: hm-trade

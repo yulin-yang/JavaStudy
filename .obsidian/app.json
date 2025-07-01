@@ -1,0 +1,7 @@
+{
+  "newLinkFormat": "relative",
+  "attachmentFolderPath": "././{{filename}}.assets",
+  "useMarkdownLinks": true,
+  "showLineNumber": false,
+  "strictLineBreaks": true
+}
