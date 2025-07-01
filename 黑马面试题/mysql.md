@@ -694,7 +694,6 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 >
 > 
 >
-> 
 
 如果内存池中的文件可以正常写入磁盘的话，就不需要用到`redo log`了
 
