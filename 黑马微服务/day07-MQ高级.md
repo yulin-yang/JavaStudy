@@ -44,8 +44,6 @@
 
   * 消息接收后处理过程中抛出异常
 
-
-
 综上，我们要解决消息丢失问题，保证MQ的可靠性，就必须从3个方面入手：
 
 * 确保生产者一定把消息发送到MQ
@@ -87,8 +85,6 @@ docker stop mq
 **注意**：当网络不稳定的时候，利用重试机制可以有效提高消息发送的成功率。不过SpringAMQP提供的重试机制是**阻塞式**的重试，也就是说多次重试等待的过程中，当前线程是被阻塞的。
 
 如果对于业务性能有要求，建议禁用重试机制。如果一定要使用，请合理配置等待时长和重试次数，当然也可以考虑使用异步线程来执行发送消息的代码。
-
-
 
 ## 1.2.生产者确认机制
 
@@ -921,8 +917,6 @@ UPDATE `order` SET status = ? , pay_time = ? WHERE id = ? AND status = 1
 
 官方文档说明：
 
-
-
 ### 4.2.1.下载
 
 插件下载地址：
@@ -934,8 +928,6 @@ UPDATE `order` SET status = ? , pay_time = ? WHERE id = ? AND status = 1
 当然，也可以直接使用课前资料提供好的插件：
 
 ![](./day07-MQ高级.assets/U7x4bEQwcosUk2xNHdGc098znec.png)
-
-
 
 ### 4.2.2.安装
 
@@ -962,8 +954,6 @@ docker volume inspect mq-plugins
 ```
 
 插件目录被挂载到了`/var/lib/docker/volumes/mq-plugins/_data`这个目录，我们上传插件到该目录下。
-
-
 
 接下来执行命令，安装插件：
 
@@ -1025,8 +1015,6 @@ public class DelayExchangeConfig {
 }
 ```
 
-
-
 ### 4.2.4.发送延迟消息
 
 发送消息时，必须通过x-delay属性设定延迟时间：
@@ -1048,27 +1036,21 @@ void testPublisherDelayMessage() {
 }
 ```
 
-
-
 > **注意：**
 >
 > 延迟消息插件内部会维护一个本地数据库表，同时使用Elang Timers功能实现计时。如果消息的延迟时间设置较长，可能会导致堆积的延迟消息非常多，会带来较大的CPU开销，同时延迟消息的时间会存在误差。
 >
 > 因此，**不建议设置延迟时间过长的延迟消息**。
 
+## 4.3.取消超时订单问题
 
-
-## 4.3.超时订单问题
+> 用户下单后无论是否支付都将消息发送到延迟队列，但同时每条消息附带订单支付状态，30min后重新判断，只有那些未支付的订单才被消费者消费，取消订单恢复库存。
 
 接下来，我们就在交易服务中利用延迟消息实现订单超时取消功能。其大概思路如下：
 
 ![](./day07-MQ高级.assets/MIOhbsy7KomGNMxnXXIc4Tu4nXW.jpg)
 
-
-
 假如订单超时支付时间为30分钟，理论上说我们应该在下单时发送一条延迟消息，延迟时间为30分钟。这样就可以在接收到消息时检验订单支付状态，关闭未支付订单。
-
-
 
 ### 4.3.1.定义常量
 
@@ -1088,8 +1070,6 @@ public interface MQConstants {
 }
 ```
 
-
-
 ### 4.3.2.配置MQ
 
 在`trade-service`模块的`pom.xml`中引入amqp的依赖：
@@ -1101,8 +1081,6 @@ public interface MQConstants {
       <artifactId>spring-boot-starter-amqp</artifactId>
   </dependency>
 ```
-
-
 
 在`trade-service`的`application.yaml`中添加MQ的配置：
 
@@ -1116,8 +1094,6 @@ spring:
     password: 123
 ```
 
-
-
 ### 4.3.3.改造下单业务，发送延迟消息
 
 接下来，我们改造下单业务，在下单完成后，发送延迟消息，查询支付状态。
@@ -1127,8 +1103,6 @@ spring:
 ![](./day07-MQ高级.assets/image-1.png)
 
 这里延迟消息的时间应该是15分钟，不过我们为了测试方便，改成10秒。
-
-
 
 ### 4.3.4.编写查询支付状态接口
 
@@ -1145,8 +1119,6 @@ spring:
 * PayClient：支付系统的Feign客户端
 
 * PayClientFallback：支付系统的fallback逻辑
-
-
 
 `PayOrderDTO`代码如下：
 
@@ -1249,8 +1221,6 @@ public class PayClientFallback implements FallbackFactory<PayClient> {
 }
 ```
 
-
-
 最后，在`pay-service`模块的`PayController`中实现该接口：
 
 ```java
@@ -1261,8 +1231,6 @@ public PayOrderDTO queryPayOrderByBizOrderNo(@PathVariable("id") Long id){
     return BeanUtils.copyBean(payOrder, PayOrderDTO.class);
 }
 ```
-
-
 
 ### 4.3.5.监听消息，查询支付状态
 
@@ -1322,8 +1290,6 @@ public class OrderDelayMessageListener {
 ```
 
 注意，这里要在OrderServiceImpl中实现cancelOrder方法，留作作业大家自行实现。
-
-
 
 # 5.作业
 

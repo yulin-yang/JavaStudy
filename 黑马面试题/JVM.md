@@ -574,7 +574,7 @@ Nio在内存中划分出了一块直接内存。这份直接内存可以由java�
 
 ![pic_f267702d.png](./JVM.assets/pic_f267702d.png)
 
- *  类加载器: 用于装在字节码文件(.class文件)
+ *  类加载器: 用于加载字节码文件(.class文件)
  *  运行时数据区: 用于分配存储空间
  *  执行引擎: 执行字节码文件或本地方法
  *  垃圾回收期: 用于对JVM中的垃圾内容进行回收
@@ -1256,7 +1256,26 @@ CMS全称Concurrent Mark Sweep， 是一款并发的、使用标记-清除算法
 
 ![pic_e8aa4b2a.png](./JVM.assets/pic_e8aa4b2a.png)
 
-G1会专门开辟一块连续的内存空间用来存储大对象（下图红色部分
+G1会专门开辟一块连续的内存空间用来存储大对象（下图红色部分)
+
+> 小对象好复制好压缩，大对象跨多个 Region 后，**复制成本高、回收复杂、容易碎片化**；
+>
+> 所以干脆直接放到老年代、固定不动，等 GC 标记时再处理。
+
+**直接分配到老年代（Old Generation）**
+
+- G1 不像其他 GC 会先把大对象放到 Eden；
+- G1 会把大对象 **直接分配到多个连续的 Region 中**（叫做 Humongous Region）；
+- 起始 Region 标记为 `StartsHumongous`，后续 Region 标记为 `ContinuesHumongous`。
+
+**超过阈值自动触发 Full GC**
+
+- 如果频繁创建大对象，导致 G1 无法分配足够连续空 Region，就会触发 **Full GC** 释放 Humongous 区域。
+
+**回收依赖于 Full GC 或并发标记**
+
+- Humongous 对象 **不是在普通 Minor GC 或 Mixed GC 中处理的**；
+- 必须等到 **Full GC** 或 **并发标记周期 + Mixed GC 阶段** 才能尝试回收。
 
 ![image-20240926123448811](./JVM.assets/image-20240926123448811.png)
 

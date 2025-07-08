@@ -363,6 +363,12 @@ MySQL的InnoDB引擎采用的是B+树的数据结构来存储索引
 ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 ```
 
+联合索引的使用规则要注意**最左前缀原则**
+
+上述如果查询`where score = 10`或者`where score = 10 AND name = 'yyl'`都会命中
+
+但查询`where name = 'yyl'`违反最左前缀，不命中
+
 #### MySQL超大分页处理 
 
 在数据量比较大时, 如果进行`limit`分页查询, 在查询时, 越往后, 分页查询效率越低.
