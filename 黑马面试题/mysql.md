@@ -4,6 +4,17 @@
 
 ## 优化 
 
+### mysql参数优化
+
+| 参数名称                                 | 作用说明                                    | 调优建议                          | 调优效果                                            |
+| ---------------------------------------- | ------------------------------------------- | --------------------------------- | --------------------------------------------------- |
+| `innodb_buffer_pool_size`                | InnoDB 数据页缓存区，决定数据能否从内存读取 | 设置为物理内存的 60%~80%（如 8G） | 降低磁盘 IO，提升查询性能                           |
+| `innodb_log_file_size`                   | redo log 文件大小                           | 调大到 256M~512M                  | 减少刷盘频率，提升写入效率                          |
+| `innodb_flush_log_at_trx_commit`         | 控制事务提交时 redo log 刷盘策略            | 写多读少可设为 `2`，默认 `1` 安全 | 提高写性能，容忍极低概率数据丢失                    |
+| `max_connections`                        | 同时允许的最大连接数                        | 高并发业务建议调大到 500~1000     | 防止连接满导致拒绝服务                              |
+| `tmp_table_size` / `max_heap_table_size` | 内存临时表大小，超过则写磁盘                | 调大至 128M~256M                  | 减少慢查询临时表落盘，提升 group by / order by 性能 |
+| `slow_query_log`                         | 启用慢查询日志，分析执行慢的 SQL            | 设置 `long_query_time = 1` 秒     | 定位慢 SQL，辅助 SQL 优化                           |
+
 ### 慢查询 
 
 #### 如何定位慢查询
@@ -369,6 +380,21 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
 但查询`where name = 'yyl'`违反最左前缀，不命中
 
+##### 联合索引的顺序是如何决定的
+
+在 MySQL 中，联合索引是指一个索引中包含多个列，例如 `(a, b, c)`，它在底层是按照列的顺序进行排序存储的。因此，**联合索引的列顺序非常重要，直接影响到查询是否能命中索引，甚至影响执行效率和回表次数**。
+
+- 最常出现在查询条件中的列，排在前面
+
+- 区分度高的列优先
+
+  - 区分度是指列中不同值的数量。如果某列能把数据大范围过滤掉，它应尽可能排在联合索引前面，这样减少扫描行数
+
+  - > - `gender` 列只有男/女两个值，区分度低；
+    > - `email` 或 `user_id` 列每个值都不一样，区分度高。
+    >
+    > 所以索引 `(email, gender)` 会比 `(gender, email)` 效果更好。
+
 #### MySQL超大分页处理 
 
 在数据量比较大时, 如果进行`limit`分页查询, 在查询时, 越往后, 分页查询效率越低.
@@ -434,7 +460,9 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
 1. 违反最左前缀法则
 
-    如果索引了多列(多个字段), 要遵守最左前缀法则. 指的是查询从索引的最左前列开始, 并且不跳过索引中的列.
+    在联合索引中，查询时必须从最左边的列开始，才能使用索引
+
+    指的是查询从索引的最左前列开始, 并且不跳过索引中的列.
 
     匹配最左前缀法则, 走索引:
 
@@ -450,7 +478,7 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
     此时索引长度与只命中`name`索引时的长度一致, 说明只命中了最左列索引
 
-2. 范围查询右边的列, 不能使用索引
+2. 在联合索引中，一旦使用了**范围查询（`>`、`<`、`BETWEEN`）**，其后的字段索引就会失效
 
     > 第二条sql语句，`address`并未用到索引
 
@@ -458,17 +486,24 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
     根据索引长度判断, 第一条查询语句, 三个索引全部命中, 但是第二个查询语句只命中了前两个索引, 并没有命中`address`索引
 
-3. 不要在索引列上进行运算操作, 索引会失效
+3. **对索引列使用函数或表达式**
 
     ![image-20240906095040236](./mysql.assets/99d694cf8532084e6e2995803f672783.png)
 
-4. 字符串不加单引号, 造成索引失效
+4. **字符串不加单引号, 造成索引失效**
 
     ![image-20240906095234493](./mysql.assets/b5f313fc605ba856a0544a20bcd226cf.png)
 
     由于, 在查询时, 没有对字符串加单引号, MySQL的查询优化器, 会自动的进行类型转换, 造成索引失效
 
-5. 以`%`开头的`Like`模糊查询, 索引失效. 如果仅仅是尾部模糊匹配, 索引不会失效. 如果是头部模糊匹配, 索引失效.
+5. **使用 `LIKE '%xxx'` 前缀模糊匹配**
+
+    当 `LIKE` 查询的**通配符 `%` 出现在前面**时，索引会失效，因为无法定位起始位置。
+
+    ```sql
+    SELECT * FROM user WHERE name LIKE '%abc';  -- ❌ 不能用索引
+    SELECT * FROM user WHERE name LIKE 'abc%';  -- ✅ 可以用索引
+    ```
 
     ![image-20240906095722993](./mysql.assets/794433bcd5c38678e64a02dc6b176d4d.png)
 
@@ -477,7 +512,7 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 答:
 
 1.  违反最左前缀法则(前提是复合索引或联合索引)
-2.  范围查询右边的列, 不能使用索引
+2.  联合索引中范围查询右边的列, 不能使用索引
 3.  不要在索引列上进行运算操作, 索引将失效
 4.  字符串不加单引号, 造成索引失效. (类型转换)
 5.  以`%`开头的`Like`模糊查询, 索引失效
@@ -616,7 +651,7 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
 ![image-20240906103753866](./mysql.assets/cc13ea2fc1e6f0d0f26c1d75f2911f01.png)
 
-##### 解决并发事务问题 
+##### 事务的隔离级别
 
 解决方案: 对事务进行隔离
 
@@ -657,8 +692,6 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
  </tbody> 
 </table>
 
-
-
 注意:事务隔离级别越高, 数据越安全, 但是性能越低
 
 ##### 面试官: 并发事务带来哪些问题? 怎么解决这些问题呢? MySQL的默认隔离级别是? 
@@ -694,12 +727,10 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
 重做日志, 记录的是事务提交时数据页的物理修改, 是用来实现事务的持久性.
 
-该日志文件由两部分组成: 重做日志缓冲(`redo log buffer`)以及重做日志文件(`redo log file`), 前者是在内存中, 后者在磁盘中. `Redolog buffer`中记录着数据页的变化，并把这些变化同步到磁盘中，也就是`redo log file`中，假如服务器宕机了就从`redo log file`中读取文件。如果`buffer pool`能够正常写入到磁盘文件的话，就不需要用到`redo log file`了，每隔一段时间就会进行数据的清理。
+该日志文件由两部分组成: 重做日志缓冲(`redo log buffer`)以及重做日志文件(`redo log file`), 前者是在内存中, 后者在磁盘中. `Redolog buffer`中记录着数据页的变化，并把这些变化**同步**到磁盘中，也就是`redo log file`中，假如服务器宕机了就从`redo log file`中读取文件。如果`buffer pool`能够正常写入到磁盘文件的话，就不需要用到`redo log file`了，每隔一段时间就会进行数据的清理。`redo log`在磁盘中存在两份，是循环写的。
 
-> 为什么不直接把`Buffer pool`的数据同步到磁盘中，需要另外用一个 `Redolog buffer`？
->
-> 
->
+> - 为什么不直接把`Buffer pool`的数据同步到磁盘中，需要另外用一个 `Redolog buffer`？
+>  - 因为这样会有严重的性能问题，同一时间操作数据库时会有大量的增删改操作，如果同步的写入磁盘，是随机存储的，性能很低。但如果使用`Redolog buffer`，在同步到磁盘的时候用的是顺序IO，因为日志文件是同步追加的，性能提升。
 
 如果内存池中的文件可以正常写入磁盘的话，就不需要用到`redo log`了
 
@@ -731,51 +762,36 @@ ALTER TABLE `cus_order` ADD INDEX id_score_name(score, name);
 
 ##### 解释一下MVCC 
 
-全称Multi-Version Concurrency Control， 多版本并发控制，指维护一个数据的多个版本, 使得读写操作没有冲突
+全称`Multi-Version Concurrency Control`， 多版本并发控制，指维护一个数据的多个版本, 使得读写操作没有冲突
 
 MVCC的具体实现, 主要依赖于数据库记录中的隐式字段、`undo log`日志、`readView`.
 
-![pic_170b5511.png](https://mark.cuckooing.cn/pics/pic_170b5511.png)
+> 假如当前有4个事务对同一行数据进行操作
+>
+> - 事务2、3、4如图所示
+> - 那么请问事务5两次查询的结果应该是什么？
+
+![image-20240906113156145](./mysql.assets/8157d1523fa2b360ae61d48f0bb47850.png)
 
 ##### MVCC-实现原理 
 
 ###### 记录中的隐藏字段 
 
+![image-20240906113248671](./mysql.assets/9c3937e0442fdd9713e407d834265258.png) 
+
 除了我们自定义的字段，在mysql中还提供了几个隐藏字段
-
-
-
-![pic_4d40b425.png](https://mark.cuckooing.cn/pics/pic_4d40b425.png)
-
-
 
 ![pic_4f80037e.png](mysql.assets/pic_4f80037e.png)
 
-<table> 
- <thead> 
-  <tr> 
-   <th>隐藏字段</th> 
-   <th>含义</th> 
-  </tr> 
- </thead> 
- <tbody> 
-  <tr> 
-   <td>DB_TRX_ID</td> 
-   <td>最近修改事务ID，记录插入这条记录或最后一次修改该记录的事务ID。自增</td> 
-  </tr> 
-  <tr> 
-   <td>DB_ROLL_PTR</td> 
-   <td>回滚指针，指向这条记录的上一个版本，用于配合undo log，指向上一个版本。</td> 
-  </tr> 
-  <tr> 
-   <td>DB_ROW_ID</td> 
-   <td>隐藏主键，如果表结构没有指定主键，将会生成该隐藏字段。</td> 
-  </tr> 
- </tbody> 
-</table>
+| 隐藏字段    | 含义                                                         |
+| ----------- | ------------------------------------------------------------ |
+| DB_TRX_ID   | 最近修改事务ID，记录插入这条记录或最后一次修改该记录的事务ID。自增 |
+| DB_ROLL_PTR | 回滚指针，指向这条记录的上一个版本，用于配合undo log，指向上一个版本。 |
+| DB_ROW_ID   | 隐藏主键，如果表结构没有指定主键，将会生成该隐藏字段。       |
 
-
-举例: 插入了某一条数据, 此时这条数据会自动初始化一个`DB_TRX_ID`, 例如为0, 当修改这条记录之后, `DB_TRX_ID`会进行自增变为1, 再次修改后, 会再次自增为2, 此时`DB_ROLL_PTR`将是1, 指向这条记录的上一个版本
+> 举例: 插入了某一条数据, 此时这条数据会自动初始化一个`DB_TRX_ID`, 例如为0, 当修改这条记录之后, `DB_TRX_ID`会进行自增变为1, 再次修改后, 会再次自增为2
+>
+> 此时`DB_ROLL_PTR`将是1, 指向这条记录的上一个版本
 
 ###### undo log 
 
@@ -789,19 +805,21 @@ MVCC的具体实现, 主要依赖于数据库记录中的隐式字段、`undo lo
 
 ![pic_d595e84e.png](mysql.assets/pic_d595e84e.png)
 
-![pic_58c8fb6f.png](https://mark.cuckooing.cn/pics/pic_58c8fb6f.png)
+![img](./mysql.assets/286a8bd633965733c43fb3ad58b10c4e.png)
 
 事务2的操作:
 
-![pic_4b11a158.png](https://mark.cuckooing.cn/pics/pic_4b11a158.png)
+> 事务2修改age为3后，此时`DB_TRX_ID`自增为2，`DB_ROLL_PIR`指向上一条修改记录
+
+![image-20240906114534949](./mysql.assets/debc5f4066d102c7d0a982c80b83d6ac.png)
 
 事务3的操作:
 
-![pic_f2fe8057.png](https://mark.cuckooing.cn/pics/pic_f2fe8057.png)
+![image-20240906114623132](./mysql.assets/a1ebdc39efa14dd02aaf24d9c2f532b0.png)
 
 事务4的操作:
 
-![pic_767c9ec2.png](https://mark.cuckooing.cn/pics/pic_767c9ec2.png)
+![image-20240906114704415](./mysql.assets/9885ead14ad6d2f34a6c5d04dbd1fb77.png)
 
 不同事务或相同事务对同一条记录进行修改, 会导致该记录的`undo log`生成一条记录版本链表, 链表的头部是最新的旧记录, 链表的尾部是最早的旧记录.
 
@@ -813,7 +831,7 @@ ReadView(读视图)是快照读SQL执行时MVCC提取数据的依据, 记录并�
    
     读取的是记录的最新版本, 读取时还要保证其他并发事务不能修改当前记录, 会对读取的记录进行加锁. 对于我们日常的操作, 如: `select ... lock in share mode`(共享锁), `select ... for update`、`update`、`insert`、`delete`(排它锁)都是一种当前读.
     
-    ![pic_6961887b.png](https://mark.cuckooing.cn/pics/pic_6961887b.png)
+    ![image-20240906115609413](./mysql.assets/84475f9b985f16b56ff13341507dc38b.png)
  *  快照读
    
     简单地`select`(不加锁)就是快照读, 快照读, 读取的是记录数据的可见版本, 有可能是历史数据, 不加锁, 是非阻塞读.
@@ -821,79 +839,66 @@ ReadView(读视图)是快照读SQL执行时MVCC提取数据的依据, 记录并�
      *  `Read Committed`: 每次`select`, 都生成一个快照读
      *  `Repeatable Read`: 开启事务后第一个`select`语句才是快照读的地方.
     
-    ![pic_d91c1f3a.png](https://mark.cuckooing.cn/pics/pic_d91c1f3a.png)
+    ![image-20240906120307698](./mysql.assets/02e552abb73553cca5c549c9d267e4d5.png)
 
 ###### ReadView中包含了四个核心字段: 
 
-<table> 
- <thead> 
-  <tr> 
-   <th>字段</th> 
-   <th>含义</th> 
-  </tr> 
- </thead> 
- <tbody> 
-  <tr> 
-   <td>m_ids</td> 
-   <td>当前活跃的事务ID集合</td> 
-  </tr> 
-  <tr> 
-   <td>min_trx_id</td> 
-   <td>最小活跃事务ID</td> 
-  </tr> 
-  <tr> 
-   <td>max_trx_id</td> 
-   <td>预分配事务ID，当前最大事务ID+1（因为事务ID是自增的）</td> 
-  </tr> 
-  <tr> 
-   <td>creator_trx_id</td> 
-   <td>ReadView创建者的事务ID</td> 
-  </tr> 
- </tbody> 
-</table>
+| 字段           | 含义                                                 |
+| -------------- | ---------------------------------------------------- |
+| m_ids          | 当前活跃的事务ID集合                                 |
+| min_trx_id     | 最小活跃事务ID                                       |
+| max_trx_id     | 预分配事务ID，当前最大事务ID+1（因为事务ID是自增的） |
+| creator_trx_id | ReadView创建者的事务ID                               |
 
-![pic_318baed8.png](https://mark.cuckooing.cn/pics/pic_318baed8.png)
+
+![image-20240906114411407](./mysql.assets/9e2bf26610e1dcc9c1e4740e5a96eb4f.png)
 
 此时, `m_ids`为\{3, 4, 5\}, `min_trx_id`为3, `max_trx_id`为6, `creator_trx_id`为5
 
-![pic_989d9217.png](https://mark.cuckooing.cn/pics/pic_989d9217.png)
+![image-20240906123224058](./mysql.assets/80d3375a95a17b44de6a1ab8925e2906.png)
 
-![pic_42ef74f4.png](https://mark.cuckooing.cn/pics/pic_42ef74f4.png)
+![image-20240906114411407](./mysql.assets/9e2bf26610e1dcc9c1e4740e5a96eb4f-1752742530718-21.png)
 
 ###### 不同的隔离级别, 生成的ReadView的时机不同: 
 
  *  `READ COMMITTED`: 在事务中每一次执行快照读时生成ReadView.
    
-    ![pic_1258b984.png](https://mark.cuckooing.cn/pics/pic_1258b984.png)
+    ![image-20240906114411407](./mysql.assets/9e2bf26610e1dcc9c1e4740e5a96eb4f-1752742537410-24.png)
     
     第一次事务5查询的读视图:
     
-    ![pic_0e742831.png](https://mark.cuckooing.cn/pics/pic_0e742831.png)
+    ![image-20240906124153090](./mysql.assets/43d344f47d550b1039fe0d40567bd5a3.png)
     
     结合`undo log`版本链进行比对
     
-    ![pic_42690018.png](https://mark.cuckooing.cn/pics/pic_42690018.png)
+    ![image-20240906124743734](./mysql.assets/617041ba6218fcf9cb8a3187fda2ba33.png)
     
-    得出结论, 当前读视图可以访问的版本是事务2提交之后的数据, 最后拿到的结果就是:![pic_cf4745cf.png](https://mark.cuckooing.cn/pics/pic_cf4745cf.png)
+    得出结论, 当前读视图可以访问的版本是事务2提交之后的数据, 最后拿到的结果就是:
+    
+    ![image-20240906124539411](./mysql.assets/fd5f4c72dbd44f315819e28151071cd7.png)
     
     第二次事务5查询的读视图:
     
-    ![pic_fd2d268e.png](https://mark.cuckooing.cn/pics/pic_fd2d268e.png)
+    ![image-20240906124841949](./mysql.assets/0d2e533806f124cd3968f740ecabdb97.png)
     
     结合`undo log`版本链进行比对:
     
-    ![pic_1c7cc3bc.png](https://mark.cuckooing.cn/pics/pic_1c7cc3bc.png)
+    ![image-20240906124926389](./mysql.assets/05e8eb560a0286f78aa7e580f6cfcb7a.png)
     
-    得出结论, 当前读视图可以访问的版本是事务3提交之后的数据, 最后拿到的结果就是:![pic_b40cd79c.png](https://mark.cuckooing.cn/pics/pic_b40cd79c.png)
+    得出结论, 当前读视图可以访问的版本是事务3提交之后的数据, 最后拿到的结果就是:
+    
+    ![image-20240906125106441](./mysql.assets/cc6310372562dc4f04fcfaae653ca2c1.png)
  *  `REPEATABLE READ`: 仅在事务中第一次执行快照读时生成ReadView, 后续复用该ReadView.
    
     事务5两次查询的读视图:
     
-    ![pic_332d702d.png](https://mark.cuckooing.cn/pics/pic_332d702d.png)
+    ![image-20240906114411407](./mysql.assets/9e2bf26610e1dcc9c1e4740e5a96eb4f-1752742642029-39.png)
     
-    ![pic_41b2cc54.png](https://mark.cuckooing.cn/pics/pic_41b2cc54.png)
+    ![image-20240906130021912](./mysql.assets/347a8648f0281388d7a5dc45e0c4a1be.png)
     
-    得出结论, 这两次读视图可以访问的版本都是事务2提交之后的数据, 最后拿到的结果就是:![pic_3ed46767.png](https://mark.cuckooing.cn/pics/pic_3ed46767.png)
+    得出结论, 这两次读视图可以访问的版本都是事务2提交之后的数据, 最后拿到的结果就是:
+    
+    ![image-20240906124539411](./mysql.assets/fd5f4c72dbd44f315819e28151071cd7-1752742658371-44.png)
 
 ##### 面试官: 事务中的隔离性是如何保证的呢? (你解释一下MVCC) 
 
