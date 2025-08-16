@@ -441,9 +441,10 @@ rabbitmqctl set_policy Lazy "^lazy-queue$" '{"queue-mode":"lazy"}' --apply-to qu
 * **`manual`**：手动模式。需要自己在业务代码中调用api，发送`ack`或`reject`，存在业务入侵，但更灵活
 
 * **`auto`**：自动模式。SpringAMQP利用AOP对我们的消息处理逻辑做了环绕增强，当业务正常执行时则自动返回`ack`.  当业务出现异常时，根据异常判断返回不同结果：
-* 如果是**业务异常**，会自动返回`nack`；
-  
-* 如果是**消息处理或校验异常**，自动返回`reject`;
+  * 如果是**业务异常**，会自动返回`nack`；
+
+  * 如果是**消息处理或校验异常**，自动返回`reject`;
+
 
 返回Reject的常见异常有：
 
